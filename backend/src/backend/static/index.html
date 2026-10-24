@@ -227,18 +227,12 @@
 
     <!-- Hero intro -->
     <div class="mb-6 no-print">
-      <div class="flex flex-wrap items-center gap-1.5 mb-2">
-        <span class="text-[11px] font-mono font-semibold px-2 py-0.5 bg-navy text-white">CMS NCCI Edits</span>
-        <span class="text-[11px] font-mono font-semibold px-2 py-0.5 bg-navy-light text-white">45 CFR § 180.50 MRF</span>
-        <span class="text-[11px] font-mono font-semibold px-2 py-0.5 bg-teal text-white">CA AB 1020 Charity Care</span>
-      </div>
-      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 class="text-2xl sm:text-3xl font-bold text-navy leading-tight">
           Stop overpaying hospital chargemaster rates.
         </h1>
-        <!-- Demo pills -->
+        <!-- Demo buttons -->
         <div class="flex flex-wrap items-center gap-2 no-print">
-          <span class="text-[11px] font-mono uppercase tracking-wider text-ink-muted">Instant Demos:</span>
           <button type="button" id="demo-btn-1" onclick="runDemoScenario('demo_1_er_trauma')"
             class="px-3 py-1.5 text-xs font-semibold bg-white border-2 border-navy text-navy hover:bg-navy hover:text-white transition-colors">
             ER Trauma ($10,955)
@@ -249,7 +243,7 @@
           </button>
           <button type="button" id="demo-btn-3" onclick="runDemoScenario('demo_3_summary_bill')"
             class="px-3 py-1.5 text-xs font-semibold bg-white border-2 border-navy text-navy hover:bg-navy hover:text-white transition-colors">
-            Unitemized Summary Bill
+            Summary Bill
           </button>
         </div>
       </div>
@@ -314,23 +308,35 @@
               </div>
             </div>
 
-            <!-- Income + Household -->
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label for="annual_income" class="block text-xs font-semibold text-ink-secondary mb-1">Annual Income (USD)</label>
-                <div class="relative">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-ink-muted">$</span>
-                  <input type="number" id="annual_income" value="48000" min="0" step="1000"
-                    class="w-full bg-surface border-2 border-surface-border pl-6 pr-3 py-2.5 text-sm font-mono font-semibold text-ink focus:outline-none focus:border-navy transition-colors" />
-                </div>
+            <!-- Income slider -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label for="annual_income" class="text-xs font-semibold text-ink-secondary">Annual Income</label>
+                <span class="font-mono text-xs font-bold text-navy" id="income-display">$48,000</span>
               </div>
-              <div>
-                <label for="household_size" class="block text-xs font-semibold text-ink-secondary mb-1">Household Size</label>
-                <div class="relative">
-                  <input type="number" id="household_size" value="3" min="1" max="20" step="1"
-                    class="w-full bg-surface border-2 border-surface-border px-3 py-2.5 text-sm font-mono font-semibold text-ink focus:outline-none focus:border-navy transition-colors" />
-                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-ink-muted pointer-events-none">ppl</span>
-                </div>
+              <input type="range" id="annual_income" min="0" max="250000" step="1000" value="48000"
+                class="w-full h-2 bg-surface-border appearance-none cursor-pointer accent-navy" style="accent-color:#1B3A6B;" />
+              <div class="flex justify-between text-[10px] font-mono text-ink-muted mt-0.5">
+                <span>$0</span><span>$125k</span><span>$250k</span>
+              </div>
+            </div>
+
+            <!-- Household stepper -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-xs font-semibold text-ink-secondary">Household Size</label>
+                <span class="font-mono text-xs font-bold text-navy" id="household-display">3 people</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="adjustHousehold(-1)"
+                  class="w-9 h-9 border-2 border-surface-border bg-surface text-ink font-bold text-lg flex items-center justify-center hover:border-navy hover:bg-navy hover:text-white transition-colors select-none">−</button>
+                <input type="range" id="household_size" min="1" max="10" step="1" value="3"
+                  class="flex-1 h-2 bg-surface-border appearance-none cursor-pointer" style="accent-color:#1B3A6B;" />
+                <button type="button" onclick="adjustHousehold(1)"
+                  class="w-9 h-9 border-2 border-surface-border bg-surface text-ink font-bold text-lg flex items-center justify-center hover:border-navy hover:bg-navy hover:text-white transition-colors select-none">+</button>
+              </div>
+              <div class="flex justify-between text-[10px] font-mono text-ink-muted mt-0.5 px-11">
+                <span>1</span><span>5</span><span>10</span>
               </div>
             </div>
 
@@ -464,12 +470,11 @@
       <div class="lg:col-span-7 space-y-5">
 
         <!-- Empty showcase (before first audit) -->
-        <div id="empty-bento-showcase" class="space-y-5 no-print">
+        <div id="empty-bento-showcase" class="no-print">
           <div class="bg-navy text-white p-6 sm:p-8 border-l-4 border-teal">
             <div class="space-y-3 max-w-xl">
-              <span class="inline-block px-2.5 py-1 bg-white/10 text-teal-light font-mono text-xs font-semibold">3-Layer Deterministic Audit Engine</span>
               <h2 class="text-xl sm:text-2xl font-bold leading-snug">Medical billing errors aren't accidents. We audit every code against federal law.</h2>
-              <p class="text-sm text-white/75 leading-relaxed">Select any sample bill or tap a live case below — on-device OCR scrubs personal data while DuckDB verifies every CPT &amp; UB-04 revenue code in milliseconds.</p>
+              <p class="text-sm text-white/75 leading-relaxed">Select a sample bill on the left, upload your own scan, or try a demo — on-device OCR scrubs personal data while DuckDB verifies every CPT code in milliseconds.</p>
               <div class="pt-2 flex flex-wrap gap-3">
                 <button type="button" onclick="quickStartSample('med_doc_bill_100500_noisy.jpg')" class="btn-cta !text-xs">
                   Try Real Cardiology Bill ($730)
@@ -477,28 +482,8 @@
                 </button>
                 <button type="button" onclick="quickStartSample('sample_1_el_camino_er_trauma.png')"
                   class="px-4 py-2 text-xs font-semibold border-2 border-white/40 text-white hover:bg-white/10 transition-colors">
-                  Try Bay Area ER Trauma ($10,955)
+                  Bay Area ER Trauma ($10,955)
                 </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div class="bg-white border-2 border-surface-border p-5">
-              <span class="text-[11px] font-mono font-semibold px-2 py-0.5 bg-teal-soft text-teal-dark border border-teal/30">Layer 1 &amp; 2</span>
-              <h3 class="font-bold text-base text-ink mt-2">CMS NCCI Edits + Hospital MRF Pricing</h3>
-              <p class="text-xs text-ink-secondary mt-1.5 leading-relaxed">Flags duplicate charges, unbundled surgical supplies, vague 4-digit UB-04 roll-ups, and markups above negotiated payer rates.</p>
-              <div class="mt-4 pt-3 border-t border-surface-border flex items-center justify-between text-xs font-mono text-ink-muted">
-                <span>67 Verified CPT/UB-04 Codes</span>
-                <span>804 MRF Contracts</span>
-              </div>
-            </div>
-            <div class="bg-navy-soft border-2 border-navy/20 p-5">
-              <span class="text-[11px] font-mono font-semibold px-2 py-0.5 bg-white border border-surface-border text-ink">Layer 3</span>
-              <h3 class="font-bold text-base text-ink mt-2">Statutory Charity Care Forgiveness</h3>
-              <p class="text-xs text-ink-secondary mt-1.5 leading-relaxed">Under CA AB 1020 &amp; IRS § 501(r), patients under 200% FPL qualify for 100% bill forgiveness; up to 400% FPL unlocks a mandatory 65% discount.</p>
-              <div class="mt-4 pt-3 border-t border-navy/20 text-xs font-mono text-ink-secondary">
-                Legal Appeal Letter Included
               </div>
             </div>
           </div>
@@ -662,19 +647,20 @@
                   <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                   <span id="copy-letter-label">Copy Letter</span>
                 </button>
-                <button type="button" onclick="downloadDisputeLetter()" class="btn-ghost !py-1.5 !px-3 !text-xs">
-                  <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                  Download .TXT
-                </button>
-                <button type="button" onclick="window.print()" class="btn-ghost !py-1.5 !px-3 !text-xs">
-                  <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                  Print / PDF
+                <button type="button" onclick="downloadDisputeLetterPdf()" class="btn-cta !py-1.5 !px-3 !text-xs">
+                  <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+                  Download PDF
                 </button>
               </div>
             </div>
-            <pre id="dispute-letter-text"
-              class="w-full bg-surface border border-surface-border p-4 sm:p-5 text-xs sm:text-[13px] font-mono text-ink leading-relaxed whitespace-pre-wrap overflow-x-auto max-h-[440px]"
-            ></pre>
+            <!-- PDF-style letter preview -->
+            <div id="dispute-letter-pdf-preview"
+              class="w-full bg-white border-2 border-surface-border overflow-auto"
+              style="max-height:520px; font-family:'Times New Roman',Times,serif;">
+              <div id="dispute-letter-inner" style="padding:48px 56px; max-width:680px; margin:0 auto; font-size:13px; line-height:1.7; color:#0D1B2A;">
+                <pre id="dispute-letter-text" style="white-space:pre-wrap; font-family:inherit; font-size:inherit; line-height:inherit; margin:0; padding:0; color:inherit; background:transparent; border:none;"></pre>
+              </div>
+            </div>
           </section>
 
         </div><!-- /audit-results-wrapper -->
@@ -789,6 +775,7 @@
     // ── Init ─────────────────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", async () => {
       refreshIcons();
+      syncSliderDisplays();
       updateLiveFplPill();
       bindContextListeners();
       await loadSampleBillsAndMeta();
@@ -821,6 +808,25 @@
       if (d.open) d.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
+    // ── Slider display sync ───────────────────────────────────────────────
+    function syncSliderDisplays() {
+      const income = Math.max(0, parseFloat(document.getElementById("annual_income").value || "0"));
+      const size   = Math.max(1, parseInt(document.getElementById("household_size").value || "1", 10));
+      document.getElementById("income-display").textContent =
+        "$" + income.toLocaleString("en-US");
+      document.getElementById("household-display").textContent =
+        size + (size === 1 ? " person" : " people");
+    }
+
+    function adjustHousehold(delta) {
+      const el = document.getElementById("household_size");
+      const cur = parseInt(el.value || "1", 10);
+      el.value = Math.min(10, Math.max(1, cur + delta));
+      syncSliderDisplays();
+      updateLiveFplPill();
+      showUpdateButtonIfAudited();
+    }
+
     // ── FPL meter ─────────────────────────────────────────────────────────
     function updateLiveFplPill() {
       const income = Math.max(0, parseFloat(document.getElementById("annual_income").value || "0"));
@@ -849,8 +855,12 @@
 
     // ── Listeners ─────────────────────────────────────────────────────────
     function bindContextListeners() {
-      document.getElementById("annual_income").addEventListener("input", () => { updateLiveFplPill(); showUpdateButtonIfAudited(); });
-      document.getElementById("household_size").addEventListener("input", () => { updateLiveFplPill(); showUpdateButtonIfAudited(); });
+      document.getElementById("annual_income").addEventListener("input", () => {
+        syncSliderDisplays(); updateLiveFplPill(); showUpdateButtonIfAudited();
+      });
+      document.getElementById("household_size").addEventListener("input", () => {
+        syncSliderDisplays(); updateLiveFplPill(); showUpdateButtonIfAudited();
+      });
       document.getElementById("hospital_name").addEventListener("change", () => {
         userManuallyChangedHospital = (document.getElementById("hospital_name").value !== AUTO_DETECT);
         showUpdateButtonIfAudited();
@@ -859,11 +869,10 @@
         userManuallyChangedPayer = (document.getElementById("payer_name").value !== AUTO_DETECT);
         showUpdateButtonIfAudited();
       });
-      // Language change: re-run audit if results are visible
+      // Language change: re-run audit bypassing the _demosRunning guard
       document.getElementById("language").addEventListener("change", () => {
         if (!document.getElementById("audit-results-wrapper").classList.contains("hidden")) {
-          showStatusBanner("Re-running audit in new language...", "info");
-          reanalyzeIfReady();
+          reanalyzeWithLanguage();
         }
       });
       // File upload
@@ -1103,6 +1112,8 @@
         lastAuditSource = "stage2";
         renderAuditReport(report);
       } catch (err) {
+        document.getElementById("audit-results-wrapper").classList.add("hidden");
+        document.getElementById("empty-bento-showcase").classList.remove("hidden");
         showStatusBanner(err.message || "Error analyzing medical bill.", "error");
       } finally {
         btnAnalyze.disabled = false;
@@ -1168,6 +1179,53 @@
       document.getElementById("hospital_name").value = AUTO_DETECT;
       document.getElementById("payer_name").value = AUTO_DETECT;
       await reanalyzeIfReady();
+    }
+
+    // ── Language re-run: bypasses _demosRunning so changing language always works ──
+    async function reanalyzeWithLanguage() {
+      // Temporarily reset the running guard so language re-run always fires
+      const wasRunning = _demosRunning;
+      _demosRunning = false;
+      showStatusBanner("Translating audit to new language...", "info");
+      await reanalyzeIfReady();
+      hideStatusBanner();
+      // Restore guard only if a demo was actually running (edge case)
+      if (wasRunning) _demosRunning = false; // don't restore true — the re-run finished
+    }
+
+    // ── PDF download using browser print-to-PDF on a hidden iframe ────────
+    function downloadDisputeLetterPdf() {
+      const text = document.getElementById("dispute-letter-text").textContent || "";
+      if (!text.trim()) return;
+
+      // Build a minimal print-ready HTML document
+      const htmlContent = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>MedBill Shield — Dispute Letter</title>
+<style>
+  @page { margin: 2.2cm 2.5cm; size: A4; }
+  body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.7; color: #000; margin: 0; padding: 0; }
+  pre { white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit; margin: 0; }
+</style>
+</head><body><pre>${text.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</pre></body></html>`;
+
+      // Open in a hidden iframe and trigger print (user saves as PDF)
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0"; iframe.style.bottom = "0";
+      iframe.style.width = "0"; iframe.style.height = "0";
+      iframe.style.border = "none";
+      document.body.appendChild(iframe);
+      iframe.contentDocument.open();
+      iframe.contentDocument.write(htmlContent);
+      iframe.contentDocument.close();
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          setTimeout(() => document.body.removeChild(iframe), 1000);
+        }, 200);
+      };
     }
 
     // ── Animated counter ──────────────────────────────────────────────────
@@ -1379,16 +1437,6 @@
       }
     }
 
-    function downloadDisputeLetter() {
-      const text = document.getElementById("dispute-letter-text").textContent || "";
-      if (!text) return;
-      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href = url; a.download = "MedBill_Shield_Dispute_Letter.txt";
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a); URL.revokeObjectURL(url);
-    }
   </script>
 </body>
 </html>

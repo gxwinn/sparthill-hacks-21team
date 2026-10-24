@@ -17,6 +17,14 @@ class RawLineItem(BaseModel):
 
 
 class ExtractedBillSchema(BaseModel):
+    is_valid_medical_document: bool = Field(
+        default=True,
+        description="True ONLY if the image is a genuine medical bill, hospital statement, Explanation of Benefits (EOB), or clinical discharge summary. False if the image is a landscape photo, random picture, non-medical receipt, or contains no healthcare billing/clinical content.",
+    )
+    rejection_reason: str = Field(
+        default="",
+        description="If is_valid_medical_document is False, a clear explanation of what the image appears to be and why it is not a medical billing document.",
+    )
     hospital_name: str = Field(
         default="",
         description="Hospital or medical center name extracted from the bill (empty string if not visible).",
@@ -26,10 +34,12 @@ class ExtractedBillSchema(BaseModel):
         description="Insurance payer or health plan name extracted from the bill (empty string if not visible).",
     )
     is_itemized: bool = Field(
-        description="True if 5-digit CPT/HCPCS or 4-digit revenue codes are present; False if this is a summary statement without codes."
+        default=False,
+        description="True if 5-digit CPT/HCPCS or 4-digit revenue codes are present; False if this is a summary statement without codes.",
     )
     line_items: list[RawLineItem] = Field(
-        description="Extracted billable procedure line items from the medical bill."
+        default_factory=list,
+        description="Extracted billable procedure line items from the medical bill (empty list if not a medical bill).",
     )
 
 
@@ -211,7 +221,7 @@ class GovernanceMetadata(BaseModel):
     deterministic_sql_engine: str = (
         "DuckDB Embedded OLAP Engine (0% AI Math Hallucinations)"
     )
-    ai_model_used: str = "gemini-2.5-flash"
+    ai_model_used: str = "gemini-3.5-flash-lite"
     ai_mode: str
     sql_queries_executed: list[str]
     data_provenance_sources: list[dict] = Field(default_factory=list)

@@ -464,7 +464,16 @@ def normalize_and_filter_extracted_bill(
         )
 
     has_valid_codes = any(is_valid_procedure_code(i.cpt_code) for i in cleaned_items)
+    is_valid_doc = bool(bill.is_valid_medical_document and len(cleaned_items) > 0)
+    rejection_msg = bill.rejection_reason
+    if not is_valid_doc and not rejection_msg:
+        rejection_msg = (
+            "No billable medical procedures, CPT/HCPCS codes, or hospital statement charges "
+            "were detected in this image."
+        )
     return ExtractedBillSchema(
+        is_valid_medical_document=is_valid_doc,
+        rejection_reason=rejection_msg if not is_valid_doc else "",
         hospital_name=bill.hospital_name,
         payer_name=bill.payer_name,
         is_itemized=bool(has_valid_codes),
@@ -1223,11 +1232,10 @@ def redact_bill_image(image_bytes: bytes) -> tuple[bytes, str, dict[str, Any]]:
     """
     try:
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    except Exception:
-        img = _create_synthetic_bill_canvas(
-            hospital_name="El Camino Health",
-            line_items=[RawLineItem(**item) for item in DEMO_BILLS["demo_1_er_trauma"]["line_items"]],
-        )
+    except Exception as exc:
+        raise ValueError(
+            "Uploaded file could not be decoded as a valid image (.jpg, .png, .webp)."
+        ) from exc
 
     width, height = img.size
 

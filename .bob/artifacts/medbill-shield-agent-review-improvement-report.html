@@ -1,0 +1,324 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MedBill Shield — Agent Review</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    background: #ffffff;
+    color: #1f2328;
+    padding: 32px 20px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; color: #1f2328; margin-bottom: 4px; }
+  .meta { font-size: 12px; color: #57606a; margin-bottom: 28px; }
+  h2 { font-size: 15px; font-weight: 700; color: #1f2328; margin: 28px 0 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+  h3 { font-size: 13px; font-weight: 700; color: #1f2328; margin: 16px 0 6px; }
+  p { color: #1f2328; margin-bottom: 8px; }
+  .section { margin-bottom: 32px; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .badge-bug { background: #fceae8; color: #c8322b; border: 1px solid #f0b7b3; }
+  .badge-ux  { background: #e8effd; color: #1849a9; border: 1px solid #b3c9f8; }
+  .badge-design { background: #f0eafd; color: #6030c0; border: 1px solid #c9b3f0; }
+  .badge-code { background: #f7f8fa; color: #57606a; border: 1px solid #e5e7eb; }
+  .badge-good { background: #e6f4e6; color: #1a6b1a; border: 1px solid #a0d4a0; }
+  .item {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: #f7f8fa;
+  }
+  .item-title { font-weight: 600; font-size: 13.5px; margin-bottom: 4px; }
+  .item-body { font-size: 13px; color: #3d4440; line-height: 1.55; }
+  code {
+    font-family: "SFMono-Regular", "Consolas", monospace;
+    font-size: 11.5px;
+    background: #f0f1f3;
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: #c8322b;
+  }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 10px; }
+  .summary-table th { text-align: left; background: #f0f1f3; padding: 6px 10px; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+  .summary-table td { padding: 6px 10px; border-bottom: 1px solid #f0f1f3; vertical-align: top; }
+  .green { color: #1a6b1a; font-weight: 600; }
+  .red { color: #c8322b; font-weight: 600; }
+  .amber { color: #8b4a00; font-weight: 600; }
+  .score { font-size: 20px; font-weight: 700; }
+  .score-block { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 20px; margin: 4px; background: #f7f8fa; min-width: 100px; }
+  .score-label { font-size: 11px; color: #57606a; margin-top: 2px; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #57606a; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>MedBill Shield — Agent Review Report</h1>
+  <p class="meta">Reviewed by IBM Bob Agent  ·  Live server tested at <code>http://127.0.0.1:8000</code>  ·  All three demo scenarios + Stage 1/2 flow exercised</p>
+
+  
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px">
+    <div class="score-block"><span class="score green">✓</span><span class="score-label">Server Starts</span></div>
+    <div class="score-block"><span class="score green">✓</span><span class="score-label">All 3 Demos Pass</span></div>
+    <div class="score-block"><span class="score green">✓</span><span class="score-label">Stage 1 Redact</span></div>
+    <div class="score-block"><span class="score green">✓</span><span class="score-label">Stage 2 Analyze</span></div>
+    <div class="score-block"><span class="score amber">5</span><span class="score-label">Bugs Found</span></div>
+    <div class="score-block"><span class="score" style="color:#3b82d4">7</span><span class="score-label">UX Issues</span></div>
+    <div class="score-block"><span class="score" style="color:#7c5cd8">4</span><span class="score-label">Design Notes</span></div>
+  </div>
+
+  
+  <div class="section">
+    <h2>✅ What Works Great</h2>
+    <div class="two-col">
+      <div class="item">
+        <div class="item-title">3-Layer DuckDB Audit Engine</div>
+        <div class="item-body">Deterministic, zero AI math. NCCI edits, MRF rates, charity care all fire correctly in all tested scenarios. Savings math is exact and mutually exclusive between layers.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Two-Stage PII Redaction Flow</div>
+        <div class="item-body">Stage 1 runs fully offline OCR on Windows, masks 7 PII categories, returns a <code>redaction_id</code> cache. Stage 2 consumes the cached bytes. Privacy-first design is correctly enforced.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Auto-Detect + Manual Override Logic</div>
+        <div class="item-body">Hospital/payer resolution is smart: auto-detect finds Bay Area MRF matches, falls back to Federal CMS benchmark, and preserves user manual overrides without clobbering their state.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Deterministic Offline Fallback</div>
+        <div class="item-body">Without a Gemini API key, all four languages still produce correct summaries, dispute letters, and per-CPT explanations via the CPT translation dictionary. Zero crash on missing key.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Path Traversal Protection</div>
+        <div class="item-body"><code>/api/sample-bills/../../etc/passwd</code> correctly returns 404. The <code>target.parent != SAMPLE_BILLS_DIR</code> guard works.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Input Validation via Pydantic</div>
+        <div class="item-body"><code>household_size=0</code> returns a clean 422 with the exact field error. No internal crashes on bad inputs.</div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2>🐛 Bugs Found</h2>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-bug">BUG 1 — High Severity</span> Unicode bullet "•" and "§" rendered as garbage in API responses</div>
+      <div class="item-body">
+        All string data returned from the API contains corrupted characters: <code>•</code> becomes <code>a??</code>, <code>§</code> becomes <code>A</code>, <code>é</code> becomes <code>A?</code>. Confirmed in <code>detection_banner_message</code>, sample bill <code>label</code>, Spanish <code>plain_language_summary</code>, and the dispute letter. The data is internally correct UTF-8 but the CSV files are being read with the wrong encoding and stored in DuckDB accordingly.<br /><br />
+        <strong>Root cause:</strong> <code>read_csv_auto()</code> in <code>db.py</code> doesn't force UTF-8. If any CSV was saved as Windows-1252 (likely the case for special characters), DuckDB guesses wrong.<br /><br />
+        <strong>Fix:</strong> Add <code>encoding='utf-8'</code> to every <code>read_csv_auto()</code> call in <code>db.py</code>, and ensure all CSV files are saved as UTF-8.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-bug">BUG 2 — High Severity</span> <code>_GEMINI_NETWORK_UNAVAILABLE</code> is a module-level global that persists across requests</div>
+      <div class="item-body">
+        In <code>llm_service.py</code>, once <em>any</em> Gemini API call fails (e.g. a timeout on one request), <code>_GEMINI_NETWORK_UNAVAILABLE = True</code> is set for the entire server lifetime. All subsequent requests — even after the network recovers — permanently skip Gemini and fall back to deterministic mode with no way to reset without restarting the server.<br /><br />
+        <strong>Fix:</strong> Use a timestamp-based cooldown (e.g. retry after 60 s) rather than a permanent flag. Or better: remove the global entirely and let each request catch its own exception.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-bug">BUG 3 — Medium</span> Redaction cache is unbounded in time — stale sessions silently fail after server restart</div>
+      <div class="item-body">
+        <code>_REDACTION_CACHE</code> is an in-memory dict limited to 50 entries by count, but has no TTL. After a server restart, any <code>redaction_id</code> still held by a browser tab is silently invalid, giving users the confusing error "Redacted session expired or missing." The cache also grows unbounded between the count check (it could momentarily exceed 50 concurrent entries under load).<br /><br />
+        <strong>Fix:</strong> Store a <code>created_at</code> timestamp per entry and evict entries older than, say, 30 minutes, or display a friendlier "session expired, please re-run Step 1" message before the stage 2 fetch.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-bug">BUG 4 — Medium</span> <code>uv run backend</code> exits silently with code 0 when port 8000 is already bound</div>
+      <div class="item-body">
+        When port 8000 is occupied, uvicorn raises <code>OSError: [WinError 10048]</code> after startup. The process exits 0, but the log is empty and no user-readable error is emitted to stdout before exit when the process is backgrounded. Developers see silent failure.<br /><br />
+        <strong>Fix:</strong> Wrap <code>uvicorn.run()</code> in <code>__init__.py</code>'s <code>main()</code> in a try/except and print a clear message: <em>"Port 8000 is already in use. Is another instance running?"</em>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-bug">BUG 5 — Low</span> Payer value mismatch: "Other US Hospital" + auto-payer resolves to "Anthem Blue Cross" silently</div>
+      <div class="item-body">
+        When the user selects "Other US Hospital" from the dropdown and leaves payer on Auto-Detect, the resolved payer becomes <code>Anthem Blue Cross</code> with banner text "Auto-Detected from Bill: Other US Hospital • Anthem Blue Cross. Because this facility/insurer is outside the Bay Area MRF registry…". The banner then contradicts itself — Anthem is a Bay Area MRF payer but the hospital is not, leading to a confusing CMS benchmark being applied under a named payer label.<br /><br />
+        <strong>Fix:</strong> When hospital resolves to "Other US Hospital", default payer to "CMS Medicare Benchmark" instead of "Anthem Blue Cross".
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2>🧭 User Flow Improvements</h2>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-ux">UX 1</span> No loading indicator during demo button runs</div>
+      <div class="item-body">
+        Clicking "ER Trauma ($10,955)" shows only a tiny status banner saying "Running…" but the demo buttons themselves don't disable or show a spinner. Users double-click them, triggering duplicate requests. The three demo pill buttons should disable and show a loading state while the fetch is in progress.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-ux">UX 2</span> Language change while viewing results re-runs full audit — no user indication</div>
+      <div class="item-body">
+        Changing the language dropdown silently fires <code>reanalyzeIfReady()</code> with no loading state on the button or results area. Users don't know the audit is being re-run and may switch language again mid-request. Show a subtle loading overlay or disable the dropdown during re-analysis.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-ux">UX 3</span> "Update Audit ↻" button appears only after editing income/household — but not after changing hospital/payer</div>
+      <div class="item-body">
+        <code>showUpdateButtonIfAudited()</code> is called from <code>income</code>, <code>household_size</code>, <code>hospital</code>, and <code>payer</code> listeners — good. But the button is hidden in its initial state with <code>class="hidden"</code> and appears only after results are visible. When results are present and a user then uploads a <em>new</em> bill, the button stays visible but clicking it re-runs the old redaction. It should be hidden or relabeled to avoid confusion.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-ux">UX 4</span> No feedback after "Copy Letter" fails (clipboard API unavailable over HTTP)</div>
+      <div class="item-body">
+        <code>navigator.clipboard.writeText()</code> requires a secure context (HTTPS or localhost). Over plain HTTP on any device other than localhost, it throws and the button reads "Copy Failed" permanently until the user reloads. Add a visible inline text fallback: select the <code>&lt;pre&gt;</code> content and tell users to press Ctrl+C/Cmd+C.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-ux">UX 5</span> No suggested income/household pre-fill when picking from sample bills gallery</div>
+      <div class="item-body">
+        The <code>/api/meta</code> response already includes <code>suggested_income</code> and <code>suggested_household_size</code> per sample bill. But <code>selectSampleBillByFilename()</code> never uses them — it intentionally only resets the file, leaving the user's income/household untouched. This is fine for returning users, but for first-time users with the default values it means the demo income ($48,000, household 3) may not match what the bill implies. A note like "Suggested income for this bill: $72,000" would help set expectations.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-ux">UX 6</span> "Re-run local PII redaction" button label is confusing after Stage 2 is complete</div>
+      <div class="item-body">
+        The small ghost link below the Stage 2 audit button reads "Re-run local PII redaction." After a full audit has been run, pressing it restarts Stage 1 and hides the audit results without any warning. Users might accidentally clear their audit while trying to review the redacted image. The button should either: (a) be removed after Stage 2 completes, or (b) warn "This will clear your audit results."
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-ux">UX 7</span> Hero "Try Real Cardiology Bill" quick-start fires Stage 1 without user seeing the preview first</div>
+      <div class="item-body">
+        <code>quickStartSample(filename)</code> calls <code>selectSampleBillByFilename()</code> then immediately <code>await runStage1Redaction()</code>. This means the user never sees the "Original Unredacted Bill" stage — they jump straight to scanning, skipping the privacy education moment. The sequential two-stage design intent is bypassed. Consider showing the preview for 1 second before auto-running Stage 1, or keep the quick-start as a single-click demo path only (currently the left panel's own Stage 1/2 flow is the canonical path).
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2>🎨 Design Improvements</h2>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-design">DESIGN 1</span> The "Inspector" button label is cryptic on mobile</div>
+      <div class="item-body">
+        On screens &lt; 768 px the button reads "Inspector" only (the "For Judges /" part hides via <code>hidden md:inline</code>). Judges reviewing on a phone see "Inspector" with a terminal icon — no context. Rename mobile label to "Tech Proof" or keep the full label but truncate gracefully.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-design">DESIGN 2</span> Line item "billed → allowed" layout breaks on narrow mobile</div>
+      <div class="item-body">
+        The billed/allowed price comparison row uses <code>sm:flex-col</code> with <code>items-end</code>. On 375 px (iPhone SE), the two price values and the "Save $X" pill all stack in a column and overflow to the right edge due to the fixed <code>shrink-0</code> on the parent. The price column needs a <code>max-w</code> constraint or the row should be full-width on mobile.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-design">DESIGN 3</span> Document viewport max-height clips tall bills without a scroll cue</div>
+      <div class="item-body">
+        The image frame has <code>max-h-[360px] overflow-auto</code>. Tall multi-page bills are clipped with no visual scroll indicator (no shadow fade or "scroll to see more" affordance). Add a bottom gradient fade on the container when the image overflows.
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-design">DESIGN 4</span> Summary bill scenario (Demo 3) final balance shows full billed amount — visually indistinguishable from "no savings"</div>
+      <div class="item-body">
+        When a non-itemized bill runs, <code>final_patient_balance == total_billed</code> and <code>total_savings == 0</code>. The hero summary card shows "Final Fair Balance: $8,450" in large font with "$0.00 Total Waived (0% off)" — this looks like a failed audit, not a deliberate "pending itemization" state. The hero card should display a different layout for the UB-04 request path: replace the savings pill with a "⚠ Audit Paused — Itemization Required" pill.
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2>🔧 Code Quality Notes</h2>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-code">CODE 1</span> <code>_resolve_hospital_and_payer()</code> is ~160 lines of deeply nested conditionals</div>
+      <div class="item-body">The logic is correct but very hard to follow. The "if auto + matched", "if auto + external", "if manual + local MRF", "if manual + other" branches with cross-checks between hospital and payer states would benefit from a small state machine or a decision table (4×4 grid). No functional change needed, but a refactor would improve maintainability significantly.</div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-code">CODE 2</span> <code>init_db()</code> re-creates all tables on every server start</div>
+      <div class="item-body"><code>CREATE OR REPLACE TABLE</code> runs every single time the app boots. This is fine for development but adds ~200 ms startup time with five CSV files. Adding a version/hash check so tables are only rebuilt when the CSVs change would speed up restarts.</div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-code">CODE 3</span> <code>get_connection()</code> returns a new DuckDB connection per call with no pooling</div>
+      <div class="item-body">Each audit opens a new <code>duckdb.connect()</code> and runs 4–8 queries. With DuckDB's embedded model this is low overhead, but under concurrent load (multiple users) it creates file-lock contention. A singleton connection or connection pool via a thread-local would be safer.</div>
+    </div>
+
+    <div class="item">
+      <div class="item-title"><span class="badge badge-code">CODE 4</span> <code>ensure_sample_bills_seeded()</code> is called on every <code>/api/meta</code> and <code>/api/samples</code> hit</div>
+      <div class="item-body">The function scans the <code>sample_bills/</code> directory on every single metadata request. This is disk I/O on a hot path. The result should be cached at startup (already done once in <code>lifespan</code>) and only refreshed on actual file changes.</div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2>📊 Summary</h2>
+    <table class="summary-table">
+      <thead><tr><th>Category</th><th>Finding</th><th>Severity</th></tr></thead>
+      <tbody>
+        <tr><td>Bug</td><td>Unicode/UTF-8 corruption in all string data from DuckDB CSVs</td><td><span class="red">High</span></td></tr>
+        <tr><td>Bug</td><td>Permanent Gemini network-unavailable flag poisons all subsequent requests</td><td><span class="red">High</span></td></tr>
+        <tr><td>Bug</td><td>In-memory redaction cache has no TTL; post-restart sessions give confusing errors</td><td><span class="amber">Medium</span></td></tr>
+        <tr><td>Bug</td><td>Silent exit on port-already-in-use; no error message to developer</td><td><span class="amber">Medium</span></td></tr>
+        <tr><td>Bug</td><td>"Other US Hospital" + auto-payer resolves to Anthem Blue Cross with contradictory banner</td><td><span class="amber">Low</span></td></tr>
+        <tr><td>UX</td><td>Demo buttons have no loading/disabled state → double-click triggers duplicate requests</td><td><span class="amber">Medium</span></td></tr>
+        <tr><td>UX</td><td>Language change silently re-runs full audit with no loading state</td><td><span class="amber">Medium</span></td></tr>
+        <tr><td>UX</td><td>"Update Audit" button stale after new bill upload</td><td><span class="amber">Low</span></td></tr>
+        <tr><td>UX</td><td>"Copy Letter" fails permanently over HTTP with no helpful fallback</td><td><span class="amber">Low</span></td></tr>
+        <tr><td>UX</td><td>Suggested income from metadata never pre-fills on sample bill selection</td><td><span class="amber">Low</span></td></tr>
+        <tr><td>UX</td><td>"Re-run PII redaction" clears audit silently after Stage 2 completes</td><td><span class="amber">Low</span></td></tr>
+        <tr><td>UX</td><td>Hero quick-start bypasses Stage 1 preview — skips privacy education moment</td><td><span class="amber">Low</span></td></tr>
+        <tr><td>Design</td><td>"Inspector" button label cryptic on mobile</td><td><span class="amber">Low</span></td></tr>
+        <tr><td>Design</td><td>Price comparison row overflows on 375 px</td><td><span class="amber">Low</span></td></tr>
+        <tr><td>Design</td><td>Tall bills clipped without scroll affordance cue</td><td><span class="amber">Low</span></td></tr>
+        <tr><td>Design</td><td>UB-04 request path hero card looks like "audit failed" — needs distinct layout</td><td><span class="amber">Medium</span></td></tr>
+        <tr><td>Code</td><td><code>_resolve_hospital_and_payer</code> deeply nested; hard to maintain</td><td style="color:#57606a">Info</td></tr>
+        <tr><td>Code</td><td><code>init_db()</code> rebuilds all tables on every boot</td><td style="color:#57606a">Info</td></tr>
+        <tr><td>Code</td><td>No DuckDB connection pooling — file-lock contention under concurrent load</td><td style="color:#57606a">Info</td></tr>
+        <tr><td>Code</td><td><code>ensure_sample_bills_seeded()</code> does disk I/O on every metadata request</td><td style="color:#57606a">Info</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>🏆 Overall Verdict</h2>
+    <p>
+      <strong>The core audit engine is solid and production-worthy.</strong> The 3-layer DuckDB deterministic audit, NCCI edits, MRF rate lookups, charity care tiers, and the two-stage local PII redaction flow all work correctly across all test scenarios. The fallback chain (Gemini → local OCR → demo preset) is sensible and the codebase is well-organized.
+    </p>
+    <p>
+      The <strong>single most important fix before a public demo</strong> is <strong>Bug 1 (UTF-8 encoding)</strong> — every string displayed to the user or returned from the API currently contains mojibake for any non-ASCII character, which makes the Spanish translation, the bullet separators in banners, and the § legal citations all appear as garbage. This is a one-line fix per <code>read_csv_auto()</code> call but has high visible impact.
+    </p>
+    <p>
+      The second most impactful fix is <strong>Bug 2 (permanent Gemini flag)</strong> — once a network hiccup hits in production, the app permanently downgrades to offline mode for all users without any indication.
+    </p>
+    <p>
+      All UX issues are minor polish. The design is high quality — the bento card layout, GSAP transitions, and typography pairing are well-executed.
+    </p>
+  </div>
+
+  <footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>

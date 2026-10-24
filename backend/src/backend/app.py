@@ -1,10 +1,13 @@
 import base64
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+import logging
 from pathlib import Path
 import time
 from typing import Any
 import uuid
+
+logger = logging.getLogger("uvicorn.error")
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
@@ -458,7 +461,11 @@ async def redact_bill_stage_1(
             detail="Please provide an uploaded bill image or select a sample bill from sample_bills/.",
         )
 
-    redacted_bytes, redacted_b64, privacy_meta = redact_bill_image(raw_bytes)
+    try:
+        redacted_bytes, redacted_b64, privacy_meta = redact_bill_image(raw_bytes)
+    except ValueError as exc:
+        logger.warning("Rejected invalid image upload in /api/redact: %s", exc)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     redaction_id = f"RED-{uuid.uuid4().hex[:10].upper()}"
 
     _evict_expired_cache_entries()
@@ -545,6 +552,13 @@ async def analyze_redacted_bill_stage_2(payload: AnalyzeRedactedRequest):
         mime_type="image/png",
         fallback_hospital=fallback_hosp,
     )
+    if not extracted_bill.is_valid_medical_document or not extracted_bill.line_items:
+        detail_msg = (
+            extracted_bill.rejection_reason
+            or "No medical billing data, CPT/HCPCS codes, or hospital charges were detected in this image. Please upload a valid medical bill or clinical statement."
+        )
+        logger.warning("Rejected non-medical image in /api/analyze: %s", detail_msg)
+        raise HTTPException(status_code=422, detail=detail_msg)
 
     return _assemble_audit_response(
         extracted_bill=extracted_bill,
@@ -578,7 +592,11 @@ async def audit_uploaded_bill(
     if not raw_bytes:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-    redacted_bytes, b64_preview, privacy_meta = redact_bill_image(raw_bytes)
+    try:
+        redacted_bytes, b64_preview, privacy_meta = redact_bill_image(raw_bytes)
+    except ValueError as exc:
+        logger.warning("Rejected invalid image upload in /api/audit/upload: %s", exc)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     fallback_hosp = (
         ""
@@ -590,6 +608,13 @@ async def audit_uploaded_bill(
         mime_type="image/png",
         fallback_hospital=fallback_hosp,
     )
+    if not extracted_bill.is_valid_medical_document or not extracted_bill.line_items:
+        detail_msg = (
+            extracted_bill.rejection_reason
+            or "No medical billing data, CPT/HCPCS codes, or hospital charges were detected in this image. Please upload a valid medical bill or clinical statement."
+        )
+        logger.warning("Rejected non-medical image in /api/analyze: %s", detail_msg)
+        raise HTTPException(status_code=422, detail=detail_msg)
 
     return _assemble_audit_response(
         extracted_bill=extracted_bill,

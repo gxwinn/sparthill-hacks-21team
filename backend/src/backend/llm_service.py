@@ -1,10 +1,11 @@
 from datetime import date
 import json
+import logging
+import time
 from typing import Any
 from google import genai
 from google.genai import types
 from backend.config import settings
-from backend.demo_data import DEMO_BILLS
 from backend.schemas import (
     AIExplanationResponse,
     AuditedLineItem,
@@ -13,6 +14,51 @@ from backend.schemas import (
     LineExplanationSchema,
     RawLineItem,
 )
+
+logger = logging.getLogger("uvicorn.error")
+if not logger.handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
+# Deprecated Gemini 2.0 / 2.5 model IDs that return 404 NOT_FOUND for new AI Studio keys
+DEPRECATED_MODEL_MAP: dict[str, str] = {
+    "gemini-2.5-flash-lite": "gemini-3.5-flash-lite",
+    "models/gemini-2.5-flash-lite": "gemini-3.5-flash-lite",
+    "gemini-2.5-flash": "gemini-3.5-flash-lite",
+    "models/gemini-2.5-flash": "gemini-3.5-flash-lite",
+    "gemini-2.0-flash": "gemini-3.5-flash-lite",
+    "models/gemini-2.0-flash": "gemini-3.5-flash-lite",
+    "gemini-1.5-flash": "gemini-3.5-flash-lite",
+}
+
+FALLBACK_GEMINI_MODELS: list[str] = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+]
+
+
+def _resolve_active_gemini_models() -> list[str]:
+    """
+    Return the ordered list of Gemini model identifiers to attempt, automatically
+    upgrading retired 2.0/2.5 model IDs that return 404 NOT_FOUND on Google AI Studio.
+    """
+    configured = (settings.GEMINI_MODEL or "gemini-3.5-flash-lite").strip()
+    primary = DEPRECATED_MODEL_MAP.get(configured.lower(), configured)
+    if primary != configured:
+        logger.warning(
+            "Configured GEMINI_MODEL '%s' is deprecated/retired (404 NOT_FOUND); "
+            "automatically upgrading to '%s'.",
+            configured,
+            primary,
+        )
+    ordered = [primary]
+    for candidate in FALLBACK_GEMINI_MODELS:
+        if candidate not in ordered:
+            ordered.append(candidate)
+    return ordered
 
 # Multi-language CPT plain-language dictionary for instant fallback or enrichment
 CPT_TRANSLATIONS: dict[str, dict[str, str]] = {
@@ -115,16 +161,7 @@ CPT_TRANSLATIONS: dict[str, dict[str, str]] = {
 }
 
 
-# After a Gemini failure, wait 60 s before retrying (avoids permanent lock-out on transient errors)
-_GEMINI_FAILED_AT: float = 0.0
-_GEMINI_RETRY_AFTER_SECS: float = 60.0
-
-
 def _has_valid_api_key() -> bool:
-    import time
-    global _GEMINI_FAILED_AT
-    if _GEMINI_FAILED_AT and (time.monotonic() - _GEMINI_FAILED_AT) < _GEMINI_RETRY_AFTER_SECS:
-        return False
     key = (settings.GEMINI_API_KEY or "").strip()
     return bool(key) and key != "your_gemini_api_key_here"
 
@@ -136,7 +173,8 @@ def extract_bill_from_image(
 ) -> tuple[ExtractedBillSchema, str]:
     """
     Step 2: Extract structured hospital_name, payer_name, and line_items from the
-    surgically PII-redacted medical bill image using local offline OCR + Google GenAI (`gemini-2.5-flash`).
+    surgically PII-redacted medical bill image using Google GenAI (`gemini-3.5-flash-lite`)
+    with local offline OCR verification and strict non-medical image rejection.
     """
     from backend.privacy import (
         extract_bill_via_local_ocr,
@@ -149,82 +187,186 @@ def extract_bill_from_image(
     )
 
     if _has_valid_api_key():
-        try:
-            client = genai.Client(
-                api_key=settings.GEMINI_API_KEY,
-                http_options={"timeout": 3000},
-            )
-            prompt = (
-                "You are an expert medical billing auditor OCR system. "
-                "Examine this surgically PII-redacted medical bill image (sensitive patient PII bounding boxes were "
-                "blacked out locally on-device for HIPAA privacy, while hospital name, insurance payer, CPT/HCPCS/revenue codes, procedure "
-                "descriptions, quantities, and dollar charges were whitelisted and preserved).\n"
-                "CRITICAL EXTRACTION RULES:\n"
-                "1. Extract `hospital_name` (exact facility name on the header, or empty string if not shown) and `payer_name` (exact insurance payer/plan name, or empty string if not shown).\n"
-                "2. Extract ONLY actual medical procedures, diagnostic tests, pharmacy/supplies, and facility services into `line_items`.\n"
-                "3. STRICTLY EXCLUDE financial summary, footer, subtotal, adjustment, discount, tax, payment, or balance-due rows "
-                "(e.g. 'Total Billed Charges', 'Total Gross Billed', 'Insurance Adjustments', 'PATIENT AMOUNT DUE', 'Balance Due', 'Subtotal', 'Amount Paid').\n"
-                "4. For each service row, separate out any leading service date (e.g. '05/22/2026' must NOT be placed in `description`), "
-                "put the 5-character CPT/HCPCS code (e.g. '93306', '80061', '71045', '92250') OR 4-digit hospital revenue code (e.g. '0250', '0120') "
-                "into `cpt_code`, put ONLY the clean procedure name into `description` (e.g. 'Echocardiogram Complete'), and extract `quantity` and `billed_amount`.\n"
-                "5. Set `is_itemized` to True whenever valid 5-digit CPT/HCPCS or 4-digit revenue codes are present."
-            )
-            response = client.models.generate_content(
-                model=settings.GEMINI_MODEL,
-                contents=[
-                    types.Part.from_bytes(
-                        data=redacted_image_bytes,
-                        mime_type=mime_type or "image/png",
-                    ),
-                    prompt,
-                ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=ExtractedBillSchema,
-                    temperature=0.1,
-                ),
-            )
-            parsed_candidate: ExtractedBillSchema | None = None
-            if response.parsed and isinstance(response.parsed, ExtractedBillSchema):
-                parsed_candidate = normalize_and_filter_extracted_bill(response.parsed)
-            elif response.text:
-                data = json.loads(response.text)
-                parsed_candidate = normalize_and_filter_extracted_bill(
-                    ExtractedBillSchema(**data)
-                )
+        client = genai.Client(
+            api_key=settings.GEMINI_API_KEY,
+            http_options={"timeout": 30000},
+        )
+        prompt = (
+            "You are an expert medical billing auditor OCR system. "
+            "Examine this image carefully.\n"
+            "CRITICAL EXTRACTION & VALIDATION RULES:\n"
+            "1. FIRST, determine whether this image is actually a medical billing statement, hospital invoice, "
+            "Explanation of Benefits (EOB), or clinical discharge summary (`is_valid_medical_document`).\n"
+            "   - If the image is a random photograph (e.g. a landscape, nature scene, person, animal, object, meme), "
+            "a non-medical receipt, or contains no healthcare billing/clinical procedures, you MUST set "
+            "`is_valid_medical_document = false`, `line_items = []`, and set `rejection_reason` to a clear explanation "
+            "(e.g. 'The uploaded image appears to be a non-medical photograph/landscape and contains no hospital billing or clinical procedure data.').\n"
+            "2. If it IS a valid medical document (`is_valid_medical_document = true`), extract `hospital_name` "
+            "(exact facility name on the header, or empty string if not shown) and `payer_name` "
+            "(exact insurance payer/plan name, or empty string if not shown).\n"
+            "3. Extract ONLY actual medical procedures, diagnostic tests, pharmacy/supplies, and facility services into `line_items`.\n"
+            "4. STRICTLY EXCLUDE financial summary, footer, subtotal, adjustment, discount, tax, payment, or balance-due rows "
+            "(e.g. 'Total Billed Charges', 'Total Gross Billed', 'Insurance Adjustments', 'PATIENT AMOUNT DUE', 'Balance Due', 'Subtotal', 'Amount Paid').\n"
+            "5. For each service row, separate out any leading service date (e.g. '05/22/2026' must NOT be placed in `description`), "
+            "put the 5-character CPT/HCPCS code (e.g. '93306', '80061', '71045', '92250') OR 4-digit hospital revenue code (e.g. '0250', '0120') "
+            "into `cpt_code`, put ONLY the clean procedure name into `description` (e.g. 'Echocardiogram Complete'), and extract `quantity` and `billed_amount`.\n"
+            "6. Set `is_itemized` to True whenever valid 5-digit CPT/HCPCS or 4-digit revenue codes are present."
+        )
 
-            if parsed_candidate and parsed_candidate.line_items:
-                if local_extracted:
-                    if not parsed_candidate.hospital_name and local_extracted.hospital_name:
-                        parsed_candidate.hospital_name = local_extracted.hospital_name
-                    if not parsed_candidate.payer_name and local_extracted.payer_name:
-                        parsed_candidate.payer_name = local_extracted.payer_name
-                return (
-                    parsed_candidate,
-                    f"Live Google GenAI SDK ({settings.GEMINI_MODEL} Vision Structured Output)",
+        last_exc: Exception | None = None
+        for model_name in _resolve_active_gemini_models():
+            t0 = time.perf_counter()
+            try:
+                logger.info(
+                    "Invoking Gemini Vision OCR (model=%s, image_bytes=%d)...",
+                    model_name,
+                    len(redacted_image_bytes),
                 )
-        except Exception as exc:
-            import time
-            global _GEMINI_FAILED_AT
-            _GEMINI_FAILED_AT = time.monotonic()
-            fallback_reason = f"Deterministic Local OCR Engine (Gemini Vision fallback: {type(exc).__name__})"
-        else:
-            fallback_reason = "Deterministic Local OCR Engine (Extracted directly from redacted bill image)"
-    else:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[
+                        types.Part.from_bytes(
+                            data=redacted_image_bytes,
+                            mime_type=mime_type or "image/png",
+                        ),
+                        prompt,
+                    ],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=ExtractedBillSchema,
+                        temperature=0.1,
+                    ),
+                )
+                elapsed = time.perf_counter() - t0
+                parsed_candidate: ExtractedBillSchema | None = None
+                if response.parsed and isinstance(response.parsed, ExtractedBillSchema):
+                    parsed_candidate = response.parsed
+                elif response.text:
+                    data = json.loads(response.text)
+                    parsed_candidate = ExtractedBillSchema(**data)
+
+                if parsed_candidate is not None:
+                    # If Gemini explicitly identified the image as a non-medical photo/document
+                    if not parsed_candidate.is_valid_medical_document:
+                        reason = (
+                            parsed_candidate.rejection_reason
+                            or "The uploaded image does not appear to be a medical bill or clinical statement."
+                        )
+                        logger.warning(
+                            "Gemini Vision (model=%s, %.2fs) rejected non-medical image: %s",
+                            model_name,
+                            elapsed,
+                            reason,
+                        )
+                        return (
+                            ExtractedBillSchema(
+                                is_valid_medical_document=False,
+                                rejection_reason=reason,
+                                hospital_name="",
+                                payer_name="",
+                                is_itemized=False,
+                                line_items=[],
+                            ),
+                            f"Live Google GenAI SDK ({model_name} Vision Validation)",
+                        )
+
+                    normalized = normalize_and_filter_extracted_bill(parsed_candidate)
+                    if normalized.line_items:
+                        if local_extracted:
+                            if not normalized.hospital_name and local_extracted.hospital_name:
+                                normalized.hospital_name = local_extracted.hospital_name
+                            if not normalized.payer_name and local_extracted.payer_name:
+                                normalized.payer_name = local_extracted.payer_name
+                        logger.info(
+                            "Gemini Vision OCR succeeded (model=%s, %.2fs, extracted_items=%d, hospital='%s').",
+                            model_name,
+                            elapsed,
+                            len(normalized.line_items),
+                            normalized.hospital_name,
+                        )
+                        return (
+                            normalized,
+                            f"Live Google GenAI SDK ({model_name} Vision Structured Output)",
+                        )
+
+                    # Gemini returned 0 line items; if local OCR extracted clinical/discharge items, return those immediately
+                    if local_extracted and local_extracted.line_items:
+                        if parsed_candidate.hospital_name and not local_extracted.hospital_name:
+                            local_extracted.hospital_name = parsed_candidate.hospital_name
+                        if parsed_candidate.payer_name and not local_extracted.payer_name:
+                            local_extracted.payer_name = parsed_candidate.payer_name
+                        logger.info(
+                            "Gemini Vision (model=%s, %.2fs) validated clinical document; using %d items from Local Clinical OCR.",
+                            model_name,
+                            elapsed,
+                            len(local_extracted.line_items),
+                        )
+                        return (
+                            normalize_and_filter_extracted_bill(local_extracted),
+                            f"Live Google GenAI SDK ({model_name} Vision) + Local Clinical OCR",
+                        )
+
+                    reason = (
+                        parsed_candidate.rejection_reason
+                        or "No medical billing line items, CPT/HCPCS codes, or hospital charges were found in the uploaded image."
+                    )
+                    logger.warning(
+                        "Gemini Vision (model=%s, %.2fs) found 0 medical line items in image: %s",
+                        model_name,
+                        elapsed,
+                        reason,
+                    )
+                    return (
+                        ExtractedBillSchema(
+                            is_valid_medical_document=False,
+                            rejection_reason=reason,
+                            hospital_name="",
+                            payer_name="",
+                            is_itemized=False,
+                            line_items=[],
+                        ),
+                        f"Live Google GenAI SDK ({model_name} Vision Validation)",
+                    )
+            except Exception as exc:
+                elapsed = time.perf_counter() - t0
+                last_exc = exc
+                logger.error(
+                    "Gemini Vision OCR request failed on model '%s' after %.2fs [%s]: %s",
+                    model_name,
+                    elapsed,
+                    type(exc).__name__,
+                    exc,
+                )
+                continue
+
         fallback_reason = (
-            "Deterministic Offline OCR Mode (Set GEMINI_API_KEY in .env for live gemini-2.5-flash Vision OCR)"
+            f"Deterministic Local OCR Engine (Gemini Vision fallback after {type(last_exc).__name__})"
+            if last_exc
+            else "Deterministic Local OCR Engine (Extracted directly from redacted bill image)"
+        )
+    else:
+        logger.info("GEMINI_API_KEY not configured; using offline Local OCR Engine.")
+        fallback_reason = (
+            "Deterministic Offline OCR Mode (Set GEMINI_API_KEY in .env for live Gemini Vision OCR)"
         )
 
     if local_extracted and local_extracted.line_items:
         return normalize_and_filter_extracted_bill(local_extracted), fallback_reason
 
-    demo_default = DEMO_BILLS["demo_1_er_trauma"]
+    # Never fabricate or return a mock bill when an uploaded image has no medical billing content
+    rejection_msg = (
+        "No medical billing data, CPT/HCPCS procedure codes, or hospital statement charges were detected "
+        "in the uploaded image. Please upload a valid medical bill or clinical statement."
+    )
+    logger.warning("Local OCR found no medical billing data in uploaded image; rejecting non-bill image.")
     return (
         ExtractedBillSchema(
-            hospital_name=fallback_hospital or demo_default["hospital_name"],
-            payer_name=str(demo_default.get("default_payer", "Anthem Blue Cross")),
-            is_itemized=True,
-            line_items=[RawLineItem(**item) for item in demo_default["line_items"]],
+            is_valid_medical_document=False,
+            rejection_reason=rejection_msg,
+            hospital_name="",
+            payer_name="",
+            is_itemized=False,
+            line_items=[],
         ),
         fallback_reason,
     )
@@ -237,7 +379,7 @@ def generate_explanations_and_dispute_letter(
     language: str,
 ) -> tuple[AIExplanationResponse, str]:
     """
-    Step 4: Use google-genai (`gemini-2.5-flash`) with Structured Outputs (`response_schema`)
+    Step 4: Use google-genai (`gemini-3.5-flash-lite`) with Structured Outputs (`response_schema`)
     to generate:
       1. Plain-language summary & per-CPT explanations in the user's requested language.
       2. A formal, legally cited Dispute & Financial Assistance Appeal Letter in English.
@@ -247,78 +389,107 @@ def generate_explanations_and_dispute_letter(
     is_itemized: bool = audit_data["is_itemized"]
 
     if _has_valid_api_key():
-        try:
-            client = genai.Client(
-                api_key=settings.GEMINI_API_KEY,
-                http_options={"timeout": 2000},
-            )
-            serializable_lines = [line.model_dump() for line in audited_lines]
-            audit_payload = {
-                "hospital_name": hospital_name,
-                "payer_name": payer_name,
-                "target_language": language,
-                "is_itemized": is_itemized,
-                "requires_ub04_request": audit_data["requires_ub04_request"],
-                "total_billed": audit_data["total_billed"],
-                "layer_1_coding_errors_removed": audit_data[
-                    "layer_1_coding_errors_removed"
-                ],
-                "layer_2_mrf_overcharge_removed": audit_data[
-                    "layer_2_mrf_overcharge_removed"
-                ],
-                "subtotal_after_layer_2": audit_data["subtotal_after_layer_2"],
-                "layer_3_charity_care_forgiveness": audit_data[
-                    "layer_3_charity_care_forgiveness"
-                ],
-                "final_patient_balance": audit_data["final_patient_balance"],
-                "charity_care": charity_care.model_dump(),
-                "line_items": serializable_lines,
-            }
+        client = genai.Client(
+            api_key=settings.GEMINI_API_KEY,
+            http_options={"timeout": 30000},
+        )
+        serializable_lines = [line.model_dump() for line in audited_lines]
+        audit_payload = {
+            "hospital_name": hospital_name,
+            "payer_name": payer_name,
+            "target_language": language,
+            "is_itemized": is_itemized,
+            "requires_ub04_request": audit_data["requires_ub04_request"],
+            "total_billed": audit_data["total_billed"],
+            "layer_1_coding_errors_removed": audit_data[
+                "layer_1_coding_errors_removed"
+            ],
+            "layer_2_mrf_overcharge_removed": audit_data[
+                "layer_2_mrf_overcharge_removed"
+            ],
+            "subtotal_after_layer_2": audit_data["subtotal_after_layer_2"],
+            "layer_3_charity_care_forgiveness": audit_data[
+                "layer_3_charity_care_forgiveness"
+            ],
+            "final_patient_balance": audit_data["final_patient_balance"],
+            "charity_care": charity_care.model_dump(),
+            "line_items": serializable_lines,
+        }
 
-            prompt = (
-                f"You are a senior medical billing advocate and health care regulatory attorney.\n"
-                f"Review these deterministic DuckDB 3-Layer Audit results (0% math hallucinations):\n"
-                f"{json.dumps(audit_payload, indent=2)}\n\n"
-                f"Generate a structured JSON response matching AIExplanationResponse:\n"
-                f"1. `overall_summary`: Plain-language executive summary of the audit outcome in {language}.\n"
-                f"2. `line_explanations`: For every line item (matching `line_index` and `cpt_code`), provide "
-                f"`plain_language_meaning` and `why_flagged` translated into {language}.\n"
-                f"3. `dispute_letter`: A formal, ready-to-send letter in English addressed to {hospital_name} "
-                f"Patient Financial Services & Billing Compliance Department. "
-                f"If `is_itemized` is False, write a formal 'HIPAA Itemized Bill (Form CMS-1450 / UB-04) Request Letter' "
-                f"citing 45 CFR § 164.524 and demanding a halt to billing collections until CPT/HCPCS codes are supplied. "
-                f"If `is_itemized` is True, write a formal 'Medical Bill Dispute & Financial Assistance Appeal Letter' "
-                f"citing the exact CPT codes, CMS NCCI edit violations, 45 CFR Part 180 Hospital Price Transparency MRF "
-                f"negotiated rates for {payer_name}, and California AB 1020 / IRS § 501(r) charity care calculations."
-            )
+        prompt = (
+            f"You are a senior medical billing advocate and health care regulatory attorney.\n"
+            f"Review these deterministic DuckDB 3-Layer Audit results (0% math hallucinations):\n"
+            f"{json.dumps(audit_payload, indent=2)}\n\n"
+            f"Generate a structured JSON response matching AIExplanationResponse:\n"
+            f"1. `overall_summary`: Plain-language executive summary of the audit outcome in {language}.\n"
+            f"2. `line_explanations`: For every line item (matching `line_index` and `cpt_code`), provide "
+            f"`plain_language_meaning` and `why_flagged` translated into {language}.\n"
+            f"3. `dispute_letter`: A formal, ready-to-send letter in English addressed to {hospital_name} "
+            f"Patient Financial Services & Billing Compliance Department. "
+            f"If `is_itemized` is False, write a formal 'HIPAA Itemized Bill (Form CMS-1450 / UB-04) Request Letter' "
+            f"citing 45 CFR § 164.524 and demanding a halt to billing collections until CPT/HCPCS codes are supplied. "
+            f"If `is_itemized` is True, write a formal 'Medical Bill Dispute & Financial Assistance Appeal Letter' "
+            f"citing the exact CPT codes, CMS NCCI edit violations, 45 CFR Part 180 Hospital Price Transparency MRF "
+            f"negotiated rates for {payer_name}, and California AB 1020 / IRS § 501(r) charity care calculations."
+        )
 
-            response = client.models.generate_content(
-                model=settings.GEMINI_MODEL,
-                contents=[prompt],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=AIExplanationResponse,
-                    temperature=0.1,
-                ),
-            )
-            if response.parsed and isinstance(response.parsed, AIExplanationResponse):
-                return (
-                    response.parsed,
-                    f"Live Google GenAI SDK ({settings.GEMINI_MODEL} Structured Output)",
+        last_exc: Exception | None = None
+        for model_name in _resolve_active_gemini_models():
+            t0 = time.perf_counter()
+            try:
+                logger.info(
+                    "Invoking Gemini Explanation & Dispute Letter Generator (model=%s, language=%s)...",
+                    model_name,
+                    language,
                 )
-            if response.text:
-                data = json.loads(response.text)
-                return (
-                    AIExplanationResponse(**data),
-                    f"Live Google GenAI SDK ({settings.GEMINI_MODEL} JSON)",
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[prompt],
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=AIExplanationResponse,
+                        temperature=0.1,
+                    ),
                 )
-        except Exception as exc:
-            import time
-            global _GEMINI_FAILED_AT
-            _GEMINI_FAILED_AT = time.monotonic()
-            mode_label = f"Deterministic Multi-Language Engine (Gemini fallback: {type(exc).__name__})"
-        else:
-            mode_label = "Deterministic Multi-Language Engine"
+                elapsed = time.perf_counter() - t0
+                if response.parsed and isinstance(response.parsed, AIExplanationResponse):
+                    logger.info(
+                        "Gemini Explanation & Dispute Letter succeeded (model=%s, %.2fs).",
+                        model_name,
+                        elapsed,
+                    )
+                    return (
+                        response.parsed,
+                        f"Live Google GenAI SDK ({model_name} Structured Output)",
+                    )
+                if response.text:
+                    data = json.loads(response.text)
+                    logger.info(
+                        "Gemini Explanation & Dispute Letter JSON succeeded (model=%s, %.2fs).",
+                        model_name,
+                        elapsed,
+                    )
+                    return (
+                        AIExplanationResponse(**data),
+                        f"Live Google GenAI SDK ({model_name} JSON)",
+                    )
+            except Exception as exc:
+                elapsed = time.perf_counter() - t0
+                last_exc = exc
+                logger.error(
+                    "Gemini Explanation generation failed on model '%s' after %.2fs [%s]: %s",
+                    model_name,
+                    elapsed,
+                    type(exc).__name__,
+                    exc,
+                )
+                continue
+
+        mode_label = (
+            f"Deterministic Multi-Language Engine (Gemini fallback: {type(last_exc).__name__})"
+            if last_exc
+            else "Deterministic Multi-Language Engine"
+        )
     else:
         mode_label = (
             "Deterministic Multi-Language Engine (Offline / No GEMINI_API_KEY Required)"
