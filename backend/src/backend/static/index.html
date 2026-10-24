@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedBill Shield — AI + DuckDB Medical Bill Auditor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printable-letter, #printable-letter * { visibility: visible; }
+      #printable-letter { position: absolute; left: 0; top: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
+  <!-- Header -->
+  <header class="bg-slate-900 text-white border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-3 h-3 rounded-full bg-emerald-400"></span>
+          <h1 class="text-xl font-bold tracking-tight">MedBill Shield</h1>
+          <span class="text-xs bg-blue-600/30 border border-blue-400/40 text-blue-200 px-2 py-0.5 rounded font-mono">
+            IBM AI Challenge • SpartHill Hacks 2026
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">
+          Local Pillow PII Scrubber (Top 15% Blackout) &rarr; Gemini 2.5 Flash Structured OCR &rarr; Deterministic DuckDB 3-Layer Audit (0% AI Math Hallucinations)
+        </p>
+      </div>
+      <div class="flex items-center gap-2 text-xs">
+        <span class="bg-emerald-950 border border-emerald-700 text-emerald-300 px-2.5 py-1 rounded font-mono">
+          PHI Bytes Sent to Cloud: 0
+        </span>
+        <span class="bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1 rounded font-mono">
+          Engine: DuckDB + google-genai
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <!-- Controls & Inputs Panel -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+      <h2 class="text-base font-semibold text-slate-800 mb-4 flex items-center justify-between">
+        <span>1. Patient Context &amp; Insurance Parameters</span>
+        <span id="fpl-live-badge" class="text-xs font-mono bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-1 rounded">
+          2026 FPL: Calculating...
+        </span>
+      </h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div>
+          <label for="hospital_name" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Hospital / Facility</label>
+          <select id="hospital_name" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <option value="El Camino Health">El Camino Health</option>
+            <option value="Stanford Health Care">Stanford Health Care</option>
+            <option value="Santa Clara Valley Medical Center">Santa Clara Valley Medical Center</option>
+            <option value="Other US Hospital">Other US Hospital (1.8x Medicare Fallback)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="payer_name" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Insurance Payer (MRF)</label>
+          <select id="payer_name" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <option value="Anthem Blue Cross">Anthem Blue Cross</option>
+            <option value="Aetna">Aetna</option>
+            <option value="Cigna">Cigna</option>
+            <option value="UnitedHealthcare">UnitedHealthcare</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="annual_income" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Annual Household Income ($)</label>
+          <input id="annual_income" type="number" step="1000" min="0" value="48000"
+            oninput="updateLiveFplBadge()"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+        </div>
+
+        <div>
+          <label for="household_size" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Household Size</label>
+          <input id="household_size" type="number" step="1" min="1" max="20" value="3"
+            oninput="updateLiveFplBadge()"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+        </div>
+
+        <div>
+          <label for="language" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Explanation Language</label>
+          <select id="language" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <option value="English">English</option>
+            <option value="Russian">Russian (Русский)</option>
+            <option value="Spanish">Spanish (Español)</option>
+            <option value="Vietnamese">Vietnamese (Tiếng Việt)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Trigger Audit Row: 1-Click Demos + File Upload -->
+      <div class="mt-6 pt-5 border-t border-slate-200 grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- 1-Click Demo Presets -->
+        <div class="lg:col-span-7">
+          <div class="text-xs font-semibold text-slate-600 uppercase mb-2">
+            Option A: 1-Click Judge Demo Presets (<code class="text-blue-700">POST /api/audit/demo</code>)
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <button type="button" onclick="runDemo('demo_1_er_trauma')"
+              class="text-left p-3 rounded-lg border border-blue-200 bg-blue-50/70 hover:bg-blue-100 transition">
+              <div class="text-xs font-bold text-blue-900">Demo 1: ER Trauma &amp; Wound</div>
+              <div class="text-xs text-blue-700 font-mono mt-0.5">$10,955.00 Billed</div>
+              <div class="text-[11px] text-slate-600 mt-1">Triggers NCCI unbundling + MRF overcharge + Charity Care</div>
+            </button>
+
+            <button type="button" onclick="runDemo('demo_2_duplicate_labs')"
+              class="text-left p-3 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 transition">
+              <div class="text-xs font-bold text-indigo-900">Demo 2: Duplicate Lab Panel</div>
+              <div class="text-xs text-indigo-700 font-mono mt-0.5">$3,545.00 Billed</div>
+              <div class="text-[11px] text-slate-600 mt-1">Triggers Duplicate CPT 80053 + Lab NCCI Edits + MRF</div>
+            </button>
+
+            <button type="button" onclick="runDemo('demo_3_summary_bill')"
+              class="text-left p-3 rounded-lg border border-amber-200 bg-amber-50/80 hover:bg-amber-100 transition">
+              <div class="text-xs font-bold text-amber-900">Demo 3: Summary Bill (No CPT)</div>
+              <div class="text-xs text-amber-800 font-mono mt-0.5">$8,450.00 Billed</div>
+              <div class="text-[11px] text-slate-600 mt-1">Missing CPT codes &rarr; HIPAA UB-04 Request Letter</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- File Upload Trigger -->
+        <div class="lg:col-span-5 flex flex-col justify-between bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+          <div class="text-xs font-semibold text-slate-600 uppercase mb-2">
+            Option B: Upload Medical Bill Image (<code class="text-emerald-700">POST /api/audit/upload</code>)
+          </div>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <input id="bill_file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp"
+              class="block w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700" />
+            <button type="button" onclick="runUploadAudit()"
+              class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
+              Scrub PII &amp; Audit Upload
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1.5">
+            Pillow blacks out top 15% header locally before sending image bytes to <code class="font-mono">gemini-2.5-flash</code>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Status / Loading Indicator -->
+    <div id="status-bar" class="hidden rounded-lg bg-blue-900 text-white px-4 py-3 text-sm flex items-center justify-between">
+      <span id="status-text">Running 3-Layer DuckDB Audit &amp; Gemini Explanation Generator...</span>
+      <span class="font-mono text-xs text-blue-200 animate-pulse">PROCESSING</span>
+    </div>
+
+    <!-- Results Container -->
+    <div id="results-container" class="space-y-6 hidden">
+      <!-- Non-Itemized UB-04 Alert Banner -->
+      <div id="ub04-warning-banner" class="hidden rounded-xl border-2 border-amber-400 bg-amber-50 p-4 text-amber-950">
+        <div class="font-bold text-sm uppercase tracking-wide text-amber-900">
+          ⚠️ Edge Case Triggered: Non-Itemized Summary Bill Detected (is_itemized = false)
+        </div>
+        <p class="text-xs mt-1 text-amber-900">
+          This hospital bill contains consolidated department totals with <strong>no 5-digit CPT/HCPCS procedure codes</strong>.
+          Layer 1 NCCI &amp; Layer 2 MRF price checks are paused to prevent guesswork. Below we generated a formal
+          <strong>HIPAA Right-of-Access Itemized Bill (Form CMS-1450 / UB-04) Request Letter</strong> demanding a full CPT breakdown and freezing collections.
+        </p>
+      </div>
+
+      <!-- Summary Numbers Row -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 uppercase">Original Total Billed</div>
+          <div id="metric-total-billed" class="text-2xl font-bold text-slate-900 mt-1 font-mono">$0.00</div>
+          <div id="metric-hospital-payer" class="text-[11px] text-slate-500 mt-1 truncate"></div>
+        </div>
+
+        <div class="bg-red-50/70 rounded-xl border border-red-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-red-800 uppercase">Layer 1: Coding Errors Removed</div>
+          <div id="metric-layer-1" class="text-2xl font-bold text-red-700 mt-1 font-mono">-$0.00</div>
+          <div class="text-[11px] text-red-700 mt-1">CMS NCCI Unbundling &amp; Duplicates</div>
+        </div>
+
+        <div class="bg-amber-50/70 rounded-xl border border-amber-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-amber-900 uppercase">Layer 2: MRF Overcharge Removed</div>
+          <div id="metric-layer-2" class="text-2xl font-bold text-amber-800 mt-1 font-mono">-$0.00</div>
+          <div class="text-[11px] text-amber-800 mt-1">45 CFR Part 180 Payer MRF Cap</div>
+        </div>
+
+        <div class="bg-purple-50/70 rounded-xl border border-purple-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-purple-900 uppercase">Layer 3: Charity Care Forgiveness</div>
+          <div id="metric-layer-3" class="text-2xl font-bold text-purple-800 mt-1 font-mono">-$0.00</div>
+          <div id="metric-layer-3-sub" class="text-[11px] text-purple-800 mt-1">CA AB 1020 &amp; IRS 501(r)</div>
+        </div>
+
+        <div class="bg-emerald-900 text-white rounded-xl border border-emerald-700 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-emerald-200 uppercase">Final Patient Balance</div>
+          <div id="metric-final-balance" class="text-2xl font-bold text-white mt-1 font-mono">$0.00</div>
+          <div id="metric-total-saved" class="text-[11px] text-emerald-300 mt-1 font-mono">Total Saved: $0.00</div>
+        </div>
+      </section>
+
+      <!-- Plain-Language Executive Summary -->
+      <section class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">
+            Plain-Language Audit Summary (<span id="summary-lang-label" class="text-blue-700">English</span>)
+          </h3>
+          <span id="audit-id-badge" class="text-xs font-mono text-slate-500"></span>
+        </div>
+        <p id="plain-language-summary" class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-lg border border-slate-200"></p>
+      </section>
+
+      <!-- Line-by-Line Audited Table -->
+      <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">
+            Deterministic Line-by-Line Audit Breakdown (0% Double-Counting)
+          </h3>
+          <span class="text-xs text-slate-500 font-mono">DuckDB SQL Verified</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 uppercase border-b border-slate-200">
+                <th class="py-2.5 px-3">CPT</th>
+                <th class="py-2.5 px-3">Procedure &amp; Plain-Language Meaning</th>
+                <th class="py-2.5 px-3 text-right">Billed</th>
+                <th class="py-2.5 px-3 text-right">Allowed (MRF)</th>
+                <th class="py-2.5 px-3 text-right">Removed</th>
+                <th class="py-2.5 px-3">Status</th>
+                <th class="py-2.5 px-3">SQL / CMS Legal Citation &amp; Explanation</th>
+              </tr>
+            </thead>
+            <tbody id="line-items-tbody" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- AI Governance & Privacy Inspector + Dispute Letter Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- AI Governance & Privacy Inspector -->
+        <section class="lg:col-span-5 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wide">
+              🛡️ AI Governance &amp; Privacy Inspector
+            </h3>
+            <span class="text-[11px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 px-2 py-0.5 rounded">
+              HIPAA SAFE
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div class="bg-slate-800/90 p-2.5 rounded border border-slate-700">
+              <div class="text-slate-400 text-[10px]">pii_scrubbed_locally</div>
+              <div id="gov-pii-scrubbed" class="text-emerald-400 font-bold mt-0.5">true</div>
+            </div>
+            <div class="bg-slate-800/90 p-2.5 rounded border border-slate-700">
+              <div class="text-slate-400 text-[10px]">phi_bytes_sent_to_cloud</div>
+              <div id="gov-phi-bytes" class="text-emerald-400 font-bold mt-0.5">0 bytes</div>
+            </div>
+            <div class="col-span-2 bg-slate-800/90 p-2.5 rounded border border-slate-700">
+              <div class="text-slate-400 text-[10px]">deterministic_sql_engine</div>
+              <div id="gov-sql-engine" class="text-blue-300 font-semibold mt-0.5"></div>
+            </div>
+            <div class="col-span-2 bg-slate-800/90 p-2.5 rounded border border-slate-700">
+              <div class="text-slate-400 text-[10px]">ai_mode</div>
+              <div id="gov-ai-mode" class="text-slate-200 mt-0.5"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="text-xs font-semibold text-slate-300 uppercase mb-1.5">
+              Pillow Top-15% Redacted Image Sent to OCR:
+            </div>
+            <div class="bg-slate-950 p-2 rounded border border-slate-800">
+              <img id="redacted-image-preview" src="" alt="PII Redacted Bill Preview"
+                class="w-full rounded border border-slate-700 max-h-56 object-contain bg-white" />
+            </div>
+          </div>
+
+          <div>
+            <div class="text-xs font-semibold text-slate-300 uppercase mb-1.5">
+              Deterministic DuckDB SQL Queries Executed:
+            </div>
+            <pre id="gov-sql-queries"
+              class="bg-slate-950 text-emerald-300 p-3 rounded border border-slate-800 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed"></pre>
+          </div>
+        </section>
+
+        <!-- Formal Dispute / Appeal Letter -->
+        <section id="printable-letter" class="lg:col-span-7 bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3 mb-3">
+              <div>
+                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                  📄 Formal Dispute &amp; Financial Assistance Appeal Letter
+                </h3>
+                <p class="text-xs text-slate-500">
+                  Cites CMS NCCI Edits, 45 CFR Part 180 MRF Rates, HIPAA 45 CFR § 164.524 &amp; CA AB 1020 / IRS § 501(r)
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="copyDisputeLetter()"
+                  class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded transition">
+                  Copy Letter
+                </button>
+                <button type="button" onclick="window.print()"
+                  class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded transition">
+                  Print / Save PDF
+                </button>
+              </div>
+            </div>
+            <textarea id="dispute-letter-box" readonly rows="24"
+              class="w-full font-mono text-xs bg-slate-50 border border-slate-300 rounded-lg p-3.5 text-slate-800 focus:outline-none leading-relaxed"></textarea>
+          </div>
+          <div id="copy-toast" class="hidden text-xs text-emerald-700 font-semibold mt-2">
+            ✓ Copied formal dispute letter to clipboard!
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function fmtCurrency(val) {
+      const num = Number(val || 0);
+      return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function updateLiveFplBadge() {
+      const income = parseFloat(document.getElementById('annual_income').value) || 0;
+      const size = Math.max(1, parseInt(document.getElementById('household_size').value) || 1);
+      const fplBase = 15650 + (size - 1) * 5500;
+      const pct = (income / fplBase) * 100;
+      let tierText = '0% Charity Care (>400% FPL)';
+      if (pct <= 200) {
+        tierText = '100% Full Forgiveness (<=200% FPL)';
+      } else if (pct <= 400) {
+        tierText = '65% Statutory Discount (200-400% FPL)';
+      }
+      document.getElementById('fpl-live-badge').textContent =
+        `2026 FPL: ${pct.toFixed(1)}% (Base $${fplBase.toLocaleString()}) → ${tierText}`;
+    }
+
+    function getFormParams() {
+      return {
+        hospital_name: document.getElementById('hospital_name').value,
+        payer_name: document.getElementById('payer_name').value,
+        annual_income: parseFloat(document.getElementById('annual_income').value) || 0,
+        household_size: Math.max(1, parseInt(document.getElementById('household_size').value) || 1),
+        language: document.getElementById('language').value,
+      };
+    }
+
+    function setLoading(isLoading, message) {
+      const bar = document.getElementById('status-bar');
+      if (isLoading) {
+        document.getElementById('status-text').textContent = message || 'Running 3-Layer Audit...';
+        bar.classList.remove('hidden');
+      } else {
+        bar.classList.add('hidden');
+      }
+    }
+
+    async function runDemo(demoId) {
+      const params = getFormParams();
+      setLoading(true, `Running 1-Click Preset (${demoId}) across DuckDB 3-Layer Auditor...`);
+      try {
+        const res = await fetch('/api/audit/demo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ demo_id: demoId, ...params }),
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        renderAuditReport(data);
+      } catch (err) {
+        alert('Audit Error: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function runUploadAudit() {
+      const fileInput = document.getElementById('bill_file');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please choose a medical bill image file first (or click one of the 1-Click Demo buttons).');
+        return;
+      }
+      const params = getFormParams();
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('hospital_name', params.hospital_name);
+      formData.append('payer_name', params.payer_name);
+      formData.append('annual_income', String(params.annual_income));
+      formData.append('household_size', String(params.household_size));
+      formData.append('language', params.language);
+
+      setLoading(true, 'Redacting top 15% PII header with Pillow & extracting CPT items with Gemini 2.5 Flash...');
+      try {
+        const res = await fetch('/api/audit/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        renderAuditReport(data);
+      } catch (err) {
+        alert('Upload Audit Error: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function statusBadgeHtml(status) {
+      const styles = {
+        VALID: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        NCCI_VIOLATION: 'bg-red-100 text-red-800 border-red-300',
+        DUPLICATE: 'bg-rose-100 text-rose-800 border-rose-300',
+        OVERCHARGED: 'bg-amber-100 text-amber-900 border-amber-300',
+        MISSING_CPT: 'bg-slate-200 text-slate-800 border-slate-400',
+      };
+      const cls = styles[status] || 'bg-slate-100 text-slate-800 border-slate-300';
+      return `<span class="inline-block px-2 py-0.5 text-[11px] font-mono font-bold rounded border ${cls}">${status}</span>`;
+    }
+
+    function renderAuditReport(data) {
+      document.getElementById('results-container').classList.remove('hidden');
+
+      // UB-04 Non-Itemized Banner
+      const ub04Banner = document.getElementById('ub04-warning-banner');
+      if (data.requires_ub04_request || !data.is_itemized) {
+        ub04Banner.classList.remove('hidden');
+      } else {
+        ub04Banner.classList.add('hidden');
+      }
+
+      // Top summary metrics
+      document.getElementById('metric-total-billed').textContent = fmtCurrency(data.total_billed);
+      document.getElementById('metric-hospital-payer').textContent = `${data.hospital_name} • ${data.payer_name}`;
+      document.getElementById('metric-layer-1').textContent = '-' + fmtCurrency(data.layer_1_coding_errors_removed);
+      document.getElementById('metric-layer-2').textContent = '-' + fmtCurrency(data.layer_2_mrf_overcharge_removed);
+      document.getElementById('metric-layer-3').textContent = '-' + fmtCurrency(data.layer_3_charity_care_forgiveness);
+      document.getElementById('metric-layer-3-sub').textContent =
+        `${data.charity_care.user_fpl_pct.toFixed(1)}% FPL → ${data.charity_care.discount_pct.toFixed(0)}% Off Valid Bill`;
+      document.getElementById('metric-final-balance').textContent = fmtCurrency(data.final_patient_balance);
+      document.getElementById('metric-total-saved').textContent = `Total Saved: ${fmtCurrency(data.total_savings)}`;
+
+      // Plain-language summary
+      document.getElementById('summary-lang-label').textContent = data.language;
+      document.getElementById('audit-id-badge').textContent = `Audit ID: ${data.audit_id}`;
+      document.getElementById('plain-language-summary').textContent = data.plain_language_summary;
+
+      // Line items table
+      const tbody = document.getElementById('line-items-tbody');
+      tbody.innerHTML = '';
+      for (const item of data.line_items) {
+        const removed = (item.layer_1_deduction || 0) + (item.layer_2_deduction || 0);
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 align-top';
+        tr.innerHTML = `
+          <td class="py-3 px-3 font-mono font-bold text-slate-900">${item.cpt_code || 'NONE'}</td>
+          <td class="py-3 px-3">
+            <div class="font-semibold text-slate-900">${item.description}</div>
+            <div class="text-slate-600 mt-1">${item.plain_language_meaning || ''}</div>
+          </td>
+          <td class="py-3 px-3 text-right font-mono">${fmtCurrency(item.billed_amount)}</td>
+          <td class="py-3 px-3 text-right font-mono">${fmtCurrency(item.allowed_amount)}</td>
+          <td class="py-3 px-3 text-right font-mono font-semibold ${removed > 0 ? 'text-red-600' : 'text-slate-400'}">
+            ${removed > 0 ? '-' + fmtCurrency(removed) : '$0.00'}
+          </td>
+          <td class="py-3 px-3">${statusBadgeHtml(item.status)}</td>
+          <td class="py-3 px-3">
+            <div class="font-mono text-[11px] text-slate-700 font-semibold">${item.citation}</div>
+            <div class="text-slate-600 mt-1">${item.why_flagged || item.violation_reason}</div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      // Governance & Privacy Inspector
+      document.getElementById('gov-pii-scrubbed').textContent = String(data.governance.pii_scrubbed_locally);
+      document.getElementById('gov-phi-bytes').textContent = `${data.governance.phi_bytes_sent_to_cloud} bytes`;
+      document.getElementById('gov-sql-engine').textContent = data.governance.deterministic_sql_engine;
+      document.getElementById('gov-ai-mode').textContent = data.governance.ai_mode;
+      document.getElementById('redacted-image-preview').src = data.redacted_image_base64;
+      document.getElementById('gov-sql-queries').textContent =
+        (data.governance.sql_queries_executed || []).join('\n\n');
+
+      // Dispute Letter
+      document.getElementById('dispute-letter-box').value = data.dispute_letter;
+    }
+
+    function copyDisputeLetter() {
+      const box = document.getElementById('dispute-letter-box');
+      navigator.clipboard.writeText(box.value);
+      const toast = document.getElementById('copy-toast');
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2500);
+    }
+
+    // Initialize live FPL calculation & run Demo 1 automatically on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      updateLiveFplBadge();
+      runDemo('demo_1_er_trauma');
+    });
+  </script>
+</body>
+</html>
