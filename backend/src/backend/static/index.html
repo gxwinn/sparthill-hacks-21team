@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
   <title>MedBill Shield — Medical Bill Protection &amp; Legal Dispute Studio</title>
+  <link rel="icon" type="image/png" href="/static/logo.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -186,7 +187,7 @@
 
       <!-- Logo -->
       <a href="/" class="flex items-center shrink-0">
-        <img src="/static/logo.svg" alt="MedBill Shield" class="h-10 w-auto" style="max-width:220px;" />
+        <img src="/static/logo.png" alt="MedBill Shield" class="h-9 sm:h-10 w-auto object-contain select-none" />
       </a>
 
       <!-- PHI Badge -->
@@ -228,10 +229,15 @@
 
     <!-- Hero intro -->
     <div class="mb-6 no-print">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 id="hero-main-title" class="text-2xl sm:text-3xl font-bold text-navy leading-tight">
-          Stop overpaying hospital chargemaster rates.
-        </h1>
+      <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div>
+          <h1 id="hero-main-title" class="text-2xl sm:text-3xl font-bold text-navy leading-tight">
+            Stop overpaying hospital chargemaster rates.
+          </h1>
+          <p id="hero-sub-title" class="text-xs sm:text-sm text-ink-muted mt-1 max-w-2xl">
+            Upload any medical bill to scrub sensitive personal data offline, benchmark charges against federal Medicare &amp; transparency rates, and dispute overcharges with one click.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -803,10 +809,13 @@
     </section>
   </main>
 
-  <footer class="mt-10 border-t-2 border-surface-border bg-white py-5 px-4 text-xs text-ink-muted no-print">
-    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-      <span class="font-semibold text-ink">MedBill Shield · Patient Financial Protection</span>
-      <span class="font-mono text-[11px]">Offline OCR · DuckDB OLAP · Google GenAI</span>
+  <footer class="mt-12 border-t-2 border-surface-border bg-white py-6 px-4 text-xs text-ink-muted no-print">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <img src="/static/logo.png" alt="MedBill Shield" class="h-6 w-auto object-contain select-none" />
+        <span class="font-semibold text-ink">MedBill Shield · Patient Financial Protection &amp; Legal Dispute Studio</span>
+      </div>
+      <span class="font-mono text-[11px] text-ink-muted">Offline Local OCR · DuckDB OLAP · Google Gemini 2.5</span>
     </div>
   </footer>
 
@@ -818,6 +827,7 @@
     const UI_STRINGS = {
       English: {
         hero_title: "Stop overpaying hospital chargemaster rates.",
+        hero_sub: "Upload any medical bill to scrub sensitive personal data offline, benchmark charges against federal Medicare & transparency rates, and dispute overcharges with one click.",
         phi_badge: "0 Bytes PHI to Cloud",
         tech_inspector: "Tech Inspector",
         card1_title: "Your Coverage & Household",
@@ -880,6 +890,7 @@
       },
       Spanish: {
         hero_title: "Deje de pagar de más por tarifas hospitalarias infladas.",
+        hero_sub: "Suba cualquier factura médica para eliminar datos personales localmente, auditar cargos con tarifas de Medicare y disputar cobros indebidos con un clic.",
         phi_badge: "0 Bytes de Datos al Servidor",
         tech_inspector: "Inspector Técnico",
         card1_title: "Su Cobertura y Hogar",
@@ -942,6 +953,7 @@
       },
       Vietnamese: {
         hero_title: "Ngừng trả giá viện phí cắt cổ theo bảng giá gốc của bệnh viện.",
+        hero_sub: "Tải lên hóa đơn y tế để xóa dữ liệu cá nhân cục bộ, đối chiếu chi phí với định mức Medicare và khiếu nại các khoản tính phí sai chỉ với 1 cú nhấp chuột.",
         phi_badge: "0 Byte Dữ liệu Cá nhân lên Đám mây",
         tech_inspector: "Thanh tra Kỹ thuật",
         card1_title: "Thông tin Bảo hiểm & Hộ gia đình",
@@ -1004,6 +1016,7 @@
       },
       Russian: {
         hero_title: "Хватит переплачивать по завышенным больничным тарифам.",
+        hero_sub: "Загрузите медицинский счет: персональные данные будут удалены локально, расценки проверены по тарифам Medicare, а претензия сформирована в один клик.",
         phi_badge: "0 Байт Персональных Данных в Облако",
         tech_inspector: "Технический инспектор",
         card1_title: "Ваша страховка и семья",
@@ -1289,6 +1302,7 @@
       };
 
       setTxt("hero-main-title", s.hero_title);
+      setTxt("hero-sub-title", s.hero_sub);
       setTxt("header-phi-badge-text", s.phi_badge);
       setTxt("header-tech-inspector-text", s.tech_inspector);
 
