@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Medical Bill Information | MedBill Shield</title>
+  <style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#98b1dd;color:#000;font-family:Calibri,Carlito,Arial,sans-serif}
+.screen{position:relative;width:100%;max-width:1280px;aspect-ratio:1280/837;
+ margin:0 auto;container-type:inline-size;background:#98b1dd}
+.placed{position:absolute;margin:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+ clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.field,.select-shell{border:1px solid #626262;border-radius:0;background:#d9d9d9}
+.field{min-width:0;padding:0 1.15cqw;color:#000;font:400 2.58cqw Calibri,Carlito,Arial,sans-serif}
+.field::placeholder{opacity:1;color:#000}
+.field[type=number]{appearance:textfield}
+.field::-webkit-inner-spin-button,.field::-webkit-outer-spin-button{appearance:none;margin:0}
+.button{display:flex;align-items:center;justify-content:center;background:#31417d;color:white;
+ border:1px solid #18234d;border-radius:0;text-decoration:none;text-align:center;
+ font-size:3.75cqw;font-weight:400;line-height:1.2;padding:0 .6cqw}
+.button:hover{background:#29396f}
+.button.small{font-size:1.35cqw}
+.heading{font-size:3.75cqw;font-weight:400;line-height:1.2;white-space:nowrap}
+.form-label{font-size:2.58cqw;line-height:1.12;font-weight:400}
+.select-shell select{appearance:none;border:0;border-radius:0;background:transparent;
+ width:100%;height:100%;min-width:0;padding:0 4.6cqw 0 1.15cqw;
+ color:#80817b;font:400 2.58cqw Calibri,Carlito,Arial,sans-serif}
+.select-shell select:has(option:checked:not([value=""])){color:#000}
+.select-shell option{color:#000;background:#fff}
+.select-shell:after{content:"";position:absolute;right:1.2cqw;top:30%;width:0;height:0;
+ border-left:1.25cqw solid transparent;border-right:1.25cqw solid transparent;
+ border-top:2.5cqw solid #81837e;pointer-events:none}
+input:focus-visible,select:focus-visible,a:focus-visible,[contenteditable]:focus-visible{
+ outline:2px solid #173568;outline-offset:2px}
+.brand-image,.bill-image{display:block;object-fit:contain}
+.upload-box{border:1px solid #626262;background:#d9d9d9;cursor:pointer}
+.upload-box .upload-icon{position:absolute;left:37%;top:4%;width:26%;height:48%;object-fit:contain}
+.upload-box .upload-label{position:absolute;left:3%;right:3%;bottom:7%;text-align:center;
+ font-size:2.58cqw;line-height:1.1}
+.upload-box input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.upload-box:focus-within{outline:2px solid #173568;outline-offset:2px}
+.card{border:1px solid #353b47;padding:1.65cqw 1.8cqw}
+.card h2{margin:0;font-size:2.58cqw;font-weight:400;line-height:1.2}
+.summary{background:#fff;color:#d43365}
+.summary ul{list-style:none;padding:0;margin:2.5cqw 0 0}
+.summary li{display:flex;align-items:center;gap:1.55cqw;margin:.9cqw 0;
+ white-space:nowrap;font-size:1.65cqw;line-height:1.3}
+.summary .warning{width:2.9cqw;height:2.9cqw;object-fit:contain}
+.savings{background:#4c596f;color:#fff}
+.savings ol{padding-left:2.9cqw;margin:1cqw 0 0;font-size:1.875cqw;line-height:1.28}
+.savings li{padding-left:0;margin:.25cqw 0}
+.savings .amount{display:block}
+.packet-preview{display:none;max-width:960px;margin:20px auto;padding:20px;background:#fff;
+ font:16px/1.5 Arial,sans-serif}
+.packet-preview:target{display:block}
+.packet-preview h2{font-size:22px}
+.packet-draft{min-height:160px;padding:12px;border:1px solid #8d9bb1}
+.note{font-size:14px;color:#4c596f}
+.packet-preview a{color:#31417d}
+@media print{body{background:#fff}.screen{display:none}.packet-preview{display:block;max-width:none;margin:0}}
+</style>
+  <script src="medbill-inputs-v6.js" defer></script>
+</head>
+<body>
+  <main class="screen" aria-label="Medical Bill Information">
+    <h1 class="placed heading" style="left:3.750000%;top:5.256870%;width:67.187500%;height:7.407407%;" >Medical Bill Information</h1><a class="placed button" style="left:72.812500%;top:4.420550%;width:24.140625%;height:9.080048%;" href="medbill-dispute-packet-v4.html#language">Translation</a><label class="placed upload-box" style="left:26.328125%;top:17.562724%;width:40.312500%;height:25.328554%;" for="medicalBill"><img class="upload-icon" src="data:image/png;base64,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" alt=""><span class="upload-label">Upload photo or PDF of your<br>medical bill</span><input id="medicalBill" name="medicalBill" type="file" accept="image/*,.pdf" aria-label="Upload photo or PDF of your medical bill"></label><label class="placed form-label" style="left:7.031250%;top:52.329749%;width:21.875000%;height:5.495818%;" for="hospital">1. Hospital</label><label class="sr-only" for="hospital">Hospital</label><div class="placed select-shell" style="left:31.250000%;top:49.581840%;width:33.281250%;height:9.199522%;"><select id="hospital" name="hospital"><option value="">Select hospital</option><option value="other">Other / not listed</option></select></div><label class="placed form-label" style="left:5.468750%;top:63.321386%;width:23.437500%;height:5.495818%;" for="insurance">2. Insurance</label><label class="sr-only" for="insurance">Insurance</label><div class="placed select-shell" style="left:31.250000%;top:60.573477%;width:33.281250%;height:9.199522%;"><select id="insurance" name="insurance"><option value="">Select insurance</option><option value="private">Private insurance</option><option value="medicare">Medicare</option><option value="medicaid">Medicaid</option><option value="other">Other / not listed</option><option value="none">No insurance</option></select></div><label class="placed form-label" style="left:2.812500%;top:74.671446%;width:28.125000%;height:10.752688%;" for="annualIncome">3. Annual household<br>&nbsp;&nbsp;&nbsp;&nbsp;income</label><label class="sr-only" for="annualIncome">Annual household income</label><input class="placed field" style="left:31.250000%;top:73.237754%;width:33.281250%;height:9.199522%;" id="annualIncome" name="annualIncome" type="number" min="0" step="1" inputmode="numeric"><label class="placed form-label" style="left:4.218750%;top:88.530466%;width:26.562500%;height:5.495818%;" for="householdSize">4. Household size</label><label class="sr-only" for="householdSize">Household size</label><input class="placed field" style="left:31.250000%;top:85.782557%;width:33.281250%;height:9.199522%;" id="householdSize" name="householdSize" type="number" min="1" step="1" inputmode="numeric"><nav aria-label="Page navigation"><a class="placed button small" style="left:1.875000%;top:96.176822%;width:7.812500%;height:3.225806%;" href="medbill-login-v4.html">Back</a><a class="placed button small" style="left:88.281250%;top:96.176822%;width:9.843750%;height:3.225806%;" href="medbill-review-v4.html">Continue</a></nav>
+  </main>
+  
+</body>
+</html>

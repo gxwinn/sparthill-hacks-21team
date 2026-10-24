@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bill Review | MedBill Shield</title>
+  <style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#98b1dd;color:#000;font-family:Calibri,Carlito,Arial,sans-serif}
+.screen{position:relative;width:100%;max-width:1280px;aspect-ratio:1280/837;
+ margin:0 auto;container-type:inline-size;background:#98b1dd}
+.placed{position:absolute;margin:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+ clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.field,.select-shell{border:1px solid #626262;border-radius:0;background:#d9d9d9}
+.field{min-width:0;padding:0 1.15cqw;color:#000;font:400 2.58cqw Calibri,Carlito,Arial,sans-serif}
+.field::placeholder{opacity:1;color:#000}
+.field[type=number]{appearance:textfield}
+.field::-webkit-inner-spin-button,.field::-webkit-outer-spin-button{appearance:none;margin:0}
+.button{display:flex;align-items:center;justify-content:center;background:#31417d;color:white;
+ border:1px solid #18234d;border-radius:0;text-decoration:none;text-align:center;
+ font-size:3.75cqw;font-weight:400;line-height:1.2;padding:0 .6cqw}
+.button:hover{background:#29396f}
+.button.small{font-size:1.35cqw}
+.heading{font-size:3.75cqw;font-weight:400;line-height:1.2;white-space:nowrap}
+.form-label{font-size:2.58cqw;line-height:1.12;font-weight:400}
+.select-shell select{appearance:none;border:0;border-radius:0;background:transparent;
+ width:100%;height:100%;min-width:0;padding:0 4.6cqw 0 1.15cqw;
+ color:#80817b;font:400 2.58cqw Calibri,Carlito,Arial,sans-serif}
+.select-shell select:has(option:checked:not([value=""])){color:#000}
+.select-shell option{color:#000;background:#fff}
+.select-shell:after{content:"";position:absolute;right:1.2cqw;top:30%;width:0;height:0;
+ border-left:1.25cqw solid transparent;border-right:1.25cqw solid transparent;
+ border-top:2.5cqw solid #81837e;pointer-events:none}
+input:focus-visible,select:focus-visible,a:focus-visible,[contenteditable]:focus-visible{
+ outline:2px solid #173568;outline-offset:2px}
+.brand-image,.bill-image{display:block;object-fit:contain}
+.upload-box{border:1px solid #626262;background:#d9d9d9;cursor:pointer}
+.upload-box .upload-icon{position:absolute;left:37%;top:4%;width:26%;height:48%;object-fit:contain}
+.upload-box .upload-label{position:absolute;left:3%;right:3%;bottom:7%;text-align:center;
+ font-size:2.58cqw;line-height:1.1}
+.upload-box input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.upload-box:focus-within{outline:2px solid #173568;outline-offset:2px}
+.card{border:1px solid #353b47;padding:1.65cqw 1.8cqw}
+.card h2{margin:0;font-size:2.58cqw;font-weight:400;line-height:1.2}
+.summary{background:#fff;color:#d43365}
+.summary ul{list-style:none;padding:0;margin:2.5cqw 0 0}
+.summary li{display:flex;align-items:center;gap:1.55cqw;margin:.9cqw 0;
+ white-space:nowrap;font-size:1.65cqw;line-height:1.3}
+.summary .warning{width:2.9cqw;height:2.9cqw;object-fit:contain}
+.savings{background:#4c596f;color:#fff}
+.savings ol{padding-left:2.9cqw;margin:1cqw 0 0;font-size:1.875cqw;line-height:1.28}
+.savings li{padding-left:0;margin:.25cqw 0}
+.savings .amount{display:block}
+.packet-preview{display:none;max-width:960px;margin:20px auto;padding:20px;background:#fff;
+ font:16px/1.5 Arial,sans-serif}
+.packet-preview:target{display:block}
+.packet-preview h2{font-size:22px}
+.packet-draft{min-height:160px;padding:12px;border:1px solid #8d9bb1}
+.note{font-size:14px;color:#4c596f}
+.packet-preview a{color:#31417d}
+@media print{body{background:#fff}.screen{display:none}.packet-preview{display:block;max-width:none;margin:0}}
+</style>
+  <script src="medbill-inputs-v6.js" defer></script>
+</head>
+<body>
+  <main class="screen" aria-label="Bill Review">
+    <!-- Backend integration: replace the PDF at the path below, or update both this data attribute and the Open PDF link. No JavaScript is required. -->
+<object id="processedBillPdf" class="placed bill-pdf" style="left:3.593750%;top:8.960573%;width:48.671875%;height:85.902031%;border:0;background:#fff;" data="medbill-processed-document-v5.pdf#view=Fit&amp;toolbar=1&amp;navpanes=0" type="application/pdf" aria-label="Processed medical bill PDF"><p style="padding:16px;font:16px/1.5 Arial,sans-serif;">Your browser cannot display an embedded PDF. <a href="medbill-processed-document-v5.pdf" target="_blank" rel="noopener">Open the document PDF</a>.</p></object><a class="placed button" style="left:73.437500%;top:4.301075%;width:24.140625%;height:9.080048%;" href="medbill-dispute-packet-v4.html#language">Translation</a><section class="placed card summary" style="left:55.078125%;top:20.430108%;width:40.468750%;height:30.585424%;" aria-label="Summary"><h2>Summary</h2><ul><li><img class="warning" src="data:image/png;base64,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" alt="Warning">Describe item flagged &amp; why</li><li><img class="warning" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACoAAAAqCAYAAADFw8lbAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGYktHRAD/AP8A/6C9p5MAAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfqChgFOwsJvQHOAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDI2LTEwLTI0VDA1OjI4OjUxKzAwOjAwowSUggAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyNi0xMC0yNFQwNToyODo1MSswMDowMNJZLD4AAAAodEVYdGRhdGU6dGltZXN0YW1wADIwMjYtMTAtMjRUMDU6NTk6MTErMDA6MDDH/32mAAAADnRFWHRTb2Z0d2FyZQBGaWdtYZ6xlmMAAAbtSURBVFjD7ZhfiF1XGcV/37fPuTOZXDNJipUWCUqaJ1EEqaLQh4o0KIhY/4GUIkIgiP/wSfGh9q2lWoiNpRiq9S8WBAnUiIpaiBWsaYkatLbWNtjGGpOZydw7d+6fs7/lwz53ijTTJDNRLGQP5zLD2fucNWt/a31rX5MkNjgigqWTTzI5fAdV5VQ37mP+DW9HEma20ceed9hGgeacyb/+Ptz3MYY+j6mhjgnj936CV330y/8fQHPOrPbOUX/2GoaTLqYGMMJhVg2jOx6ne+1uUkqXDahvZFFKiS2HPkIz2UpihGNgUAUMvWb+wF5SSmyiqjYPNCJY/svjNMeOkgmkDrIgcLCMZ9H/+2kWfvnAZQW6sRr9zOtYWljGowEzCAeDkOHWYBhzW4XuXSCldFnq9ZIYjQh6PztE719ncIRIeDhOxpRxCyAhnN7AGDzwyf89oxGBmWH75lkeOsjBBAIIEDhBtorCn5hjlfHXTjG7bQfuG5LDpTPq7pw7tJ+F1aqAU2AhAmEFLdlqjFwYMOhbl8497980yIsGmnNm4fln2fLw/VRknMAIDOF5yMqevQz33EROCSScDAoSY8Z/+h1n/vAIOedNAb14Md3+Fs49dZKkMSFwc8Iyo38GV/18BQee2/dm5gdPAwlZxsNoamf79lk48MKmOtYFGY0I+iceZvXEE5gaQo55RQ7hUROemb46TVaQiszIHbIZ3oj+6RUWf3JwU3b1skAl4e50772FZmYGR7gJRYN5IlwQzRqAZjjAbCq0hkTgBOHOtgc/z2Q8IiL+O0AXH7ydpeU+EYEkJMAMJ3BBVqwBVc6UnRXuRiaBDMlZzhVx360bFta6q3LODAcrbH3oTlLBVj6saLzwImoTtCx1hhOkCRg0gkRG5hgiZccfOczyP57dEKvrAk0p4fd/nCEzoPLgLEcmbM0zhQVYNABUeViaAMJpSr0KMHALhrNdugfftyFWz7siIlh65s/oNz+CHJi8ndyCtLLVhtrWKQTkKPdBGFP2y9wQEA2Dvz7J4qM/vmRWzwvU3dn+9fcw6uwkzMjTaSZCkC2RKT3eAcUUeLSqT+USJFMbWArXTWcL89+4BXe/JBd4CdCIoH/0B/SeOY1HiXBmAQiXcDNcUZYaWHLyaIAE0WTcQQi3wrhkbXNwGomUg/6yWP7eFzfOaEQUO/rOfqgLEMdwvFWTWtZe3FpziBiDgiAIK0XZEJiV+WaGUZqEWseYO3IXw965iy6BlzC68K3PsdQHy9Xay7MyFkFYIgCzCpQLWCA1AQpmFBjW9vu6NFn3spYSEYxMOPS9S7rnAxctrGr6S86Z3tJZuj89wNC6BGpvB25BVl3sBkNMMCs1VnWdhR/ehbpXMbs9tf+Q44yBovowJ7XZQEzzQEPz+6MMnjrOtt1vuiDg/+j1uvMG+n88gRE0kXCbykiESimAioDaH1eFN2OSxqzObMVDZZqDKQglREmpMiEzQt56bGLba7bBV05eMAf4tDZ7TzzK6NhjKCBHAgtQ2epQAoxiik603UZKMBxy5h0f4uzNt5EWlpEVYJLIVJQV1rpHaq1OZW2I/qmzLPzimxd0AIsImRl8ahe9xRWKmUxQy8Q0IAdQKcCMANwSypnFq/ew68AxkHjuu7ex/cjdyDuI3NaryNmxCkzlOanNrEGF48xWq+jQEqmq1i0Bl8Tyka+ytHAWU7TO7CRB694gw9v2Ge3fEUByfJTa4gAf9sEdWSkQh7ILCVxFYtZmhektmRg0szTf/vTLbr0Nh0PZ/h2MRzVya8O7IVMBmFSSvBxrT5tOpviSsGbM4hvfTXXNdcwcvps0P0eFEaLMVYC1a82xLCATVlGRCy/mbNGA0cHn6e589XmBplvftvtLc8cfQmbTkiXZi97mLV3lyJEwz3ihDDOBJ+bOPM3M336Lz8zirdLdAAuCBG3rNdpStwonFwdoiyCoON0bsuP6m85vT2n5BaBTXuyGVEy7dJS2NZpACbcGogjD0drWqW0I1u6nt/3fsJb9CqMBlcNfomm7VsZMhBnCmO2dXl/18zd8mIpJiW45gAqU1mKdBI0c92hjsGFqT03mBO1hr0SWdo4DCaLIiQgaEtkqXA2aRmqr1uZ6znDjresD3fna1zP54BeYqSflVTGmE2M8ghRjKhkdBa4gxYhaExRDXEGloGJCzYSUGzwaaoKkwDWm1oQqxriCur1cQVJDrQmuCRWiZkD9zpu59vp3rS8mlcHCqZMsHf8Vc7FKHk3IytBkZKUEFOB1DWqKkDAiT/BqBtFgEqSKmIwAw+pZNB6Ap5JnG0Gng+cAS6SZWQB6TXD1W/eyc9d1a1ljXaC8Asbmvxm4AvQK0CtArwC9AvQVMf4N/I0itwQgOvIAAAAASUVORK5CYII=" alt="Warning">Describe item flagged &amp; why</li><li><img class="warning" src="data:image/png;base64,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" alt="Warning">Describe item flagged &amp; why</li></ul></section><section class="placed card savings" style="left:55.078125%;top:59.259259%;width:40.468750%;height:30.465950%;" aria-label="Potential savings"><h2>Potential Savings</h2><ol><li>Original bill: $</li><li>Estimated amount after audit:<span class="amount">$</span></li><li>Amount due after financial assistance:<span class="amount">$</span></li></ol></section><nav aria-label="Page navigation"><a class="placed button small" style="left:1.875000%;top:96.176822%;width:7.812500%;height:3.225806%;" href="medbill-information-v4.html">Back</a><a class="placed button small" style="left:88.281250%;top:96.176822%;width:9.843750%;height:3.225806%;" href="medbill-dispute-packet-v4.html">Continue</a></nav><p class="sr-only">The PDF viewer uses the browser's built-in PDF support. The supplied PDF is a one-page placeholder; a backend-generated multipage PDF can replace it at the same path. The summary remains static reference content; no analysis or savings calculation is performed.</p>
+  <a id="pdfOpenLink" class="placed" style="left:3.593750%;top:96.176822%;width:48.671875%;height:3.225806%;display:flex;align-items:center;justify-content:center;font-size:1.35cqw;color:#31417d;" href="medbill-processed-document-v5.pdf" target="_blank" rel="noopener">Open PDF in a new tab</a>
+  </main>
+  
+</body>
+</html>
