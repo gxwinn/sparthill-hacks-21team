@@ -1,0 +1,23 @@
+[
+  {
+    "hospital": "Mercy General Hospital",
+    "insurance_company": "Aetna",
+    "code": "99284",
+    "procedure_name": "Emergency Room Visit Level 4 (CPT 99284)",
+    "negotiated_price": 645.00
+  },
+  {
+    "hospital": "Mercy General Hospital",
+    "insurance_company": "Aetna",
+    "code": "74177",
+    "procedure_name": "CT Abdomen & Pelvis with Contrast (CPT 74177)",
+    "negotiated_price": 890.00
+  },
+  {
+    "hospital": "Mercy General Hospital",
+    "insurance_company": "Aetna",
+    "code": "80053",
+    "procedure_name": "Comprehensive Metabolic Panel (CPT 80053)",
+    "negotiated_price": 72.00
+  }
+]

@@ -1,0 +1,37 @@
+[
+  {
+    "hospital": "Mercy General Hospital",
+    "insurance_company": "Blue Cross Blue Shield",
+    "code": "99284",
+    "procedure_name": "Emergency Room Visit Level 4 (CPT 99284)",
+    "negotiated_price": 620.00
+  },
+  {
+    "hospital": "Mercy General Hospital",
+    "insurance_company": "Blue Cross Blue Shield",
+    "code": "74177",
+    "procedure_name": "CT Abdomen & Pelvis with Contrast (CPT 74177)",
+    "negotiated_price": 850.00
+  },
+  {
+    "hospital": "Mercy General Hospital",
+    "insurance_company": "Blue Cross Blue Shield",
+    "code": "80053",
+    "procedure_name": "Comprehensive Metabolic Panel (CPT 80053)",
+    "negotiated_price": 68.00
+  },
+  {
+    "hospital": "Mercy General Hospital",
+    "insurance_company": "Blue Cross Blue Shield",
+    "code": "96360",
+    "procedure_name": "IV Hydration Infusion First Hour (CPT 96360)",
+    "negotiated_price": 110.00
+  },
+  {
+    "hospital": "Mercy General Hospital",
+    "insurance_company": "Blue Cross Blue Shield",
+    "code": "71046",
+    "procedure_name": "Chest X-Ray 2-View (CPT 71046)",
+    "negotiated_price": 145.00
+  }
+]

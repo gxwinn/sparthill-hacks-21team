@@ -1,0 +1,23 @@
+[
+  {
+    "hospital": "Metro University Heart Center",
+    "insurance_company": "UnitedHealthcare Choice Plus",
+    "code": "93306",
+    "procedure_name": "Transthoracic Echocardiogram Complete (CPT 93306)",
+    "negotiated_price": 720.00
+  },
+  {
+    "hospital": "Metro University Heart Center",
+    "insurance_company": "UnitedHealthcare Choice Plus",
+    "code": "93015",
+    "procedure_name": "Cardiovascular Stress Test (CPT 93015)",
+    "negotiated_price": 340.00
+  },
+  {
+    "hospital": "Metro University Heart Center",
+    "insurance_company": "UnitedHealthcare Choice Plus",
+    "code": "80061",
+    "procedure_name": "Lipid Panel Biomarker Screen (CPT 80061)",
+    "negotiated_price": 45.00
+  }
+]

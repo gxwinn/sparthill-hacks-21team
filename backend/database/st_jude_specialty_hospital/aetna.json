@@ -1,0 +1,30 @@
+[
+  {
+    "hospital": "St. Jude Specialty Hospital",
+    "insurance_company": "Aetna Health HMO",
+    "code": "29881",
+    "procedure_name": "Knee Arthroscopy Meniscectomy (CPT 29881)",
+    "negotiated_price": 2150.00
+  },
+  {
+    "hospital": "St. Jude Specialty Hospital",
+    "insurance_company": "Aetna Health HMO",
+    "code": "01400",
+    "procedure_name": "Anesthesia Services Moderate (CPT 01400)",
+    "negotiated_price": 540.00
+  },
+  {
+    "hospital": "St. Jude Specialty Hospital",
+    "insurance_company": "Aetna Health HMO",
+    "code": "00100",
+    "procedure_name": "Surgical Facility Fee Tier 3",
+    "negotiated_price": 1400.00
+  },
+  {
+    "hospital": "St. Jude Specialty Hospital",
+    "insurance_company": "Aetna Health HMO",
+    "code": "L1830",
+    "procedure_name": "Post-Op Knee Immobilizer Device (HCPCS L1830)",
+    "negotiated_price": 95.00
+  }
+]
