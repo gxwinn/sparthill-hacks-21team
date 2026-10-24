@@ -12,6 +12,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -191,7 +192,7 @@
       <!-- PHI Badge -->
       <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-semibold bg-teal-soft text-teal-dark border border-teal/40">
         <span class="w-1.5 h-1.5 bg-teal-dark animate-pulse"></span>
-        0 Bytes PHI to Cloud
+        <span id="header-phi-badge-text">0 Bytes PHI to Cloud</span>
       </span>
 
       <!-- Right controls -->
@@ -213,7 +214,7 @@
         <button type="button" onclick="toggleJudgeDrawer(true)"
           class="btn-ghost !py-1.5 !px-3 text-xs">
           <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
-          <span class="hidden sm:inline">Tech Inspector</span>
+          <span class="hidden sm:inline" id="header-tech-inspector-text">Tech Inspector</span>
           <span class="sm:hidden">Inspect</span>
         </button>
       </div>
@@ -228,24 +229,9 @@
     <!-- Hero intro -->
     <div class="mb-6 no-print">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 class="text-2xl sm:text-3xl font-bold text-navy leading-tight">
+        <h1 id="hero-main-title" class="text-2xl sm:text-3xl font-bold text-navy leading-tight">
           Stop overpaying hospital chargemaster rates.
         </h1>
-        <!-- Demo buttons -->
-        <div class="flex flex-wrap items-center gap-2 no-print">
-          <button type="button" id="demo-btn-1" onclick="runDemoScenario('demo_1_er_trauma')"
-            class="px-3 py-1.5 text-xs font-semibold bg-white border-2 border-navy text-navy hover:bg-navy hover:text-white transition-colors">
-            ER Trauma ($10,955)
-          </button>
-          <button type="button" id="demo-btn-2" onclick="runDemoScenario('demo_2_duplicate_labs')"
-            class="px-3 py-1.5 text-xs font-semibold bg-white border-2 border-navy text-navy hover:bg-navy hover:text-white transition-colors">
-            Duplicate Labs ($4,120)
-          </button>
-          <button type="button" id="demo-btn-3" onclick="runDemoScenario('demo_3_summary_bill')"
-            class="px-3 py-1.5 text-xs font-semibold bg-white border-2 border-navy text-navy hover:bg-navy hover:text-white transition-colors">
-            Summary Bill
-          </button>
-        </div>
       </div>
     </div>
 
@@ -263,20 +249,20 @@
             <div class="flex items-center gap-2.5">
               <span class="w-6 h-6 bg-navy text-white font-mono text-xs font-bold flex items-center justify-center shrink-0">01</span>
               <div>
-                <h2 class="font-bold text-sm text-ink">Your Coverage &amp; Household</h2>
-                <p class="text-xs text-ink-muted">Values stay locked when you switch bills</p>
+                <h2 id="card1-title-text" class="font-bold text-sm text-ink">Your Coverage &amp; Household</h2>
+                <p id="card1-sub-text" class="text-xs text-ink-muted">Values stay locked when you switch bills</p>
               </div>
             </div>
             <button type="button" id="btn-reanalyze-context" onclick="reanalyzeIfReady()"
               class="hidden btn-cta !py-1 !px-3 !text-xs">
-              Update Audit ↻
+              <span id="btn-reanalyze-text">Update Audit ↻</span>
             </button>
           </div>
 
-          <div class="space-y-3">
+          <div class="space-y-4">
             <!-- Hospital -->
             <div>
-              <label for="hospital_name" class="block text-xs font-semibold text-ink-secondary mb-1">Hospital / Medical Facility</label>
+              <label for="hospital_name" id="label-hospital-text" class="block text-xs font-semibold text-ink-secondary mb-1">Hospital / Medical Facility</label>
               <div class="relative">
                 <select id="hospital_name"
                   class="w-full bg-surface border-2 border-surface-border px-3 py-2.5 pr-8 text-sm text-ink focus:outline-none focus:border-navy transition-colors">
@@ -292,7 +278,7 @@
 
             <!-- Payer -->
             <div>
-              <label for="payer_name" class="block text-xs font-semibold text-ink-secondary mb-1">Insurance Plan / Payer</label>
+              <label for="payer_name" id="label-payer-text" class="block text-xs font-semibold text-ink-secondary mb-1">Insurance Plan / Payer</label>
               <div class="relative">
                 <select id="payer_name"
                   class="w-full bg-surface border-2 border-surface-border px-3 py-2.5 pr-8 text-sm text-ink focus:outline-none focus:border-navy transition-colors">
@@ -308,45 +294,47 @@
               </div>
             </div>
 
-            <!-- Income slider -->
+            <!-- Household size slider & stepper (FIRST, sets scale for relative income) -->
             <div>
-              <div class="flex items-center justify-between mb-1">
-                <label for="annual_income" class="text-xs font-semibold text-ink-secondary">Annual Income</label>
-                <span class="font-mono text-xs font-bold text-navy" id="income-display">$48,000</span>
-              </div>
-              <input type="range" id="annual_income" min="0" max="250000" step="1000" value="48000"
-                class="w-full h-2 bg-surface-border appearance-none cursor-pointer accent-navy" style="accent-color:#1B3A6B;" />
-              <div class="flex justify-between text-[10px] font-mono text-ink-muted mt-0.5">
-                <span>$0</span><span>$125k</span><span>$250k</span>
-              </div>
-            </div>
-
-            <!-- Household stepper -->
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="text-xs font-semibold text-ink-secondary">Household Size</label>
-                <span class="font-mono text-xs font-bold text-navy" id="household-display">3 people</span>
+              <div class="flex items-center justify-between mb-1.5">
+                <label id="label-household-text" class="text-xs font-semibold text-ink-secondary">Household Size</label>
+                <span class="font-mono text-xs font-bold text-navy bg-surface px-2 py-0.5 border border-surface-border" id="household-display">3 people</span>
               </div>
               <div class="flex items-center gap-2">
-                <button type="button" onclick="adjustHousehold(-1)"
-                  class="w-9 h-9 border-2 border-surface-border bg-surface text-ink font-bold text-lg flex items-center justify-center hover:border-navy hover:bg-navy hover:text-white transition-colors select-none">−</button>
+                <button type="button" onclick="adjustHousehold(-1)" aria-label="Decrease household size"
+                  class="w-10 h-10 border-2 border-surface-border bg-surface text-ink font-bold text-xl flex items-center justify-center hover:border-navy hover:bg-navy hover:text-white transition-colors select-none shrink-0">−</button>
                 <input type="range" id="household_size" min="1" max="10" step="1" value="3"
-                  class="flex-1 h-2 bg-surface-border appearance-none cursor-pointer" style="accent-color:#1B3A6B;" />
-                <button type="button" onclick="adjustHousehold(1)"
-                  class="w-9 h-9 border-2 border-surface-border bg-surface text-ink font-bold text-lg flex items-center justify-center hover:border-navy hover:bg-navy hover:text-white transition-colors select-none">+</button>
+                  class="flex-1 h-3 bg-surface-border appearance-none cursor-pointer" style="accent-color:#1B3A6B;" />
+                <button type="button" onclick="adjustHousehold(1)" aria-label="Increase household size"
+                  class="w-10 h-10 border-2 border-surface-border bg-surface text-ink font-bold text-xl flex items-center justify-center hover:border-navy hover:bg-navy hover:text-white transition-colors select-none shrink-0">+</button>
               </div>
-              <div class="flex justify-between text-[10px] font-mono text-ink-muted mt-0.5 px-11">
-                <span>1</span><span>5</span><span>10</span>
+              <div class="flex justify-between text-[11px] font-mono text-ink-muted mt-1 px-12">
+                <span>1-</span><span>5</span><span>10+</span>
               </div>
             </div>
 
-            <!-- FPL Meter -->
-            <div class="bg-surface p-3 border border-surface-border">
+            <!-- Annual Income slider (Relative to household size: scale dynamically shifts so 0% discount is always reachable) -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="annual_income" id="label-income-text" class="text-xs font-semibold text-ink-secondary">Annual Income</label>
+                <span class="font-mono text-xs font-bold text-navy bg-surface px-2 py-0.5 border border-surface-border" id="income-display">$48,000</span>
+              </div>
+              <input type="range" id="annual_income" min="0" max="150000" step="1000" value="48000"
+                class="w-full h-3 bg-surface-border appearance-none cursor-pointer accent-navy" style="accent-color:#1B3A6B;" />
+              <div class="flex justify-between text-[11px] font-mono text-ink-muted mt-1">
+                <span id="income-tick-min">$0-</span>
+                <span id="income-tick-mid">$75k</span>
+                <span id="income-tick-max">$150k+</span>
+              </div>
+            </div>
+
+            <!-- FPL Meter (Clean, friendly, no regulatory clutter) -->
+            <div class="bg-surface p-3.5 border border-surface-border">
               <div class="flex items-center justify-between text-xs mb-1.5">
-                <span class="font-semibold text-ink-secondary">CA AB 1020 / IRS § 501(r) Eligibility</span>
+                <span id="fpl-meter-title-text" class="font-semibold text-ink-secondary">Charity Care Eligibility</span>
                 <span id="fpl-pill-text" class="font-mono font-semibold text-teal-dark">180% FPL · 100% Forgiveness</span>
               </div>
-              <div class="w-full h-1.5 bg-surface-border overflow-hidden">
+              <div class="w-full h-2 bg-surface-border overflow-hidden">
                 <div id="fpl-meter-bar" class="h-full bg-teal transition-all duration-300" style="width:45%"></div>
               </div>
             </div>
@@ -473,16 +461,16 @@
         <div id="empty-bento-showcase" class="no-print">
           <div class="bg-navy text-white p-6 sm:p-8 border-l-4 border-teal">
             <div class="space-y-3 max-w-xl">
-              <h2 class="text-xl sm:text-2xl font-bold leading-snug">Medical billing errors aren't accidents. We audit every code against federal law.</h2>
-              <p class="text-sm text-white/75 leading-relaxed">Select a sample bill on the left, upload your own scan, or try a demo — on-device OCR scrubs personal data while DuckDB verifies every CPT code in milliseconds.</p>
+              <h2 id="showcase-main-title" class="text-xl sm:text-2xl font-bold leading-snug">Medical billing errors aren't accidents. We audit every code against federal law.</h2>
+              <p id="showcase-main-desc" class="text-sm text-white/75 leading-relaxed">Select a sample bill on the left or upload your own scan — on-device OCR scrubs personal data while DuckDB verifies every CPT code in milliseconds.</p>
               <div class="pt-2 flex flex-wrap gap-3">
                 <button type="button" onclick="quickStartSample('med_doc_bill_100500_noisy.jpg')" class="btn-cta !text-xs">
-                  Try Real Cardiology Bill ($730)
+                  <span id="showcase-btn-cardio-text">Try Real Cardiology Bill ($730)</span>
                   <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
                 <button type="button" onclick="quickStartSample('sample_1_el_camino_er_trauma.png')"
                   class="px-4 py-2 text-xs font-semibold border-2 border-white/40 text-white hover:bg-white/10 transition-colors">
-                  Bay Area ER Trauma ($10,955)
+                  <span id="showcase-btn-er-text">Bay Area ER Trauma ($10,955)</span>
                 </button>
               </div>
             </div>
@@ -564,8 +552,8 @@
                 <!-- Original billed -->
                 <div class="flex items-baseline justify-between pb-3 border-b-2 border-surface-border">
                   <div>
-                    <span class="text-[11px] font-mono uppercase tracking-wider text-ink-muted block">Original Hospital Bill</span>
-                    <span class="font-semibold text-sm text-ink">Gross Chargemaster Statement</span>
+                    <span id="label-orig-hospital-bill" class="text-[11px] font-mono uppercase tracking-wider text-ink-muted block">Original Hospital Bill</span>
+                    <span id="label-gross-chargemaster" class="font-semibold text-sm text-ink">Gross Chargemaster Statement</span>
                   </div>
                   <span id="receipt-total-billed" class="font-mono font-bold text-lg text-ink tabular-nums">$0.00</span>
                 </div>
@@ -574,26 +562,26 @@
                   <div class="flex items-center justify-between text-sm">
                     <span class="font-medium text-ink flex items-center gap-2">
                       <span class="w-2 h-2 bg-danger-DEFAULT"></span>
-                      Layer 1: Coding &amp; Bundling Errors
+                      <span id="label-layer1-title">Layer 1: Coding &amp; Billing Errors</span>
                     </span>
                     <span id="receipt-layer1-deduction" class="font-mono font-semibold text-teal-dark tabular-nums">-$0.00</span>
                   </div>
-                  <p class="text-[11px] text-ink-muted pl-4 mt-0.5">CMS NCCI unbundling, duplicate CPTs &amp; unitemized UB-04 roll-ups</p>
+                  <p id="receipt-layer1-subtext" class="text-[11px] text-ink-muted pl-4 mt-0.5">Duplicate charges, illegal bundling &amp; unitemized fees removed</p>
                 </div>
                 <!-- L2 -->
                 <div>
                   <div class="flex items-center justify-between text-sm">
                     <span class="font-medium text-ink flex items-center gap-2">
                       <span class="w-2 h-2 bg-cobalt-DEFAULT"></span>
-                      Layer 2: Markup Over Benchmark / MRF
+                      <span id="label-layer2-title">Layer 2: Price Overcharges</span>
                     </span>
                     <span id="receipt-layer2-deduction" class="font-mono font-semibold text-teal-dark tabular-nums">-$0.00</span>
                   </div>
-                  <p id="receipt-layer2-subtext" class="text-[11px] text-ink-muted pl-4 mt-0.5">45 CFR § 180.50 negotiated MRF rate or 1.8x Federal Medicare cap</p>
+                  <p id="receipt-layer2-subtext" class="text-[11px] text-ink-muted pl-4 mt-0.5">Charges lowered to official in-network negotiated rates</p>
                 </div>
                 <!-- Subtotal -->
                 <div class="flex items-center justify-between text-xs font-mono text-ink-muted py-2 border-t border-b border-dashed border-surface-border">
-                  <span>Validated Medical Subtotal</span>
+                  <span id="label-subtotal-medical">Validated Medical Subtotal</span>
                   <span id="receipt-subtotal-l2" class="tabular-nums font-semibold text-ink-secondary">$0.00</span>
                 </div>
                 <!-- L3 -->
@@ -601,8 +589,8 @@
                   <div class="flex flex-wrap items-center justify-between gap-1.5 text-sm">
                     <div class="flex items-center gap-2">
                       <span class="w-2 h-2 bg-teal-dark"></span>
-                      <span class="font-medium text-ink">Layer 3: Income Charity Care</span>
-                      <span id="receipt-charity-badge" class="px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-teal-soft text-teal-dark border border-teal/30">CA AB 1020</span>
+                      <span id="label-layer3-title" class="font-medium text-ink">Layer 3: Income Charity Care</span>
+                      <span id="receipt-charity-badge" class="px-2 py-0.5 text-[11px] font-mono font-semibold bg-teal-soft text-teal-dark border border-teal/30">100% Forgiven</span>
                     </div>
                     <span id="receipt-layer3-deduction" class="font-mono font-semibold text-teal-dark tabular-nums">-$0.00</span>
                   </div>
@@ -624,43 +612,112 @@
           <section aria-label="Line-by-Line Audit" class="bg-white border-2 border-surface-border p-5 sm:p-6">
             <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b-2 border-surface-border">
               <div>
-                <h2 class="font-bold text-base text-ink">Line-by-Line Procedure Audit</h2>
-                <p class="text-xs text-ink-muted">Tap any row to inspect statutory citation</p>
+                <h2 id="label-line-items-title" class="font-bold text-base text-ink">Line-by-Line Procedure Audit</h2>
+                <p id="label-line-items-sub" class="text-xs text-ink-muted">Tap any row to inspect statutory citation</p>
               </div>
               <span id="line-items-count-badge" class="px-2.5 py-1 text-xs font-mono font-semibold bg-surface border border-surface-border text-ink">0 items</span>
             </div>
             <div id="line-items-container" class="space-y-3"></div>
           </section>
 
-          <!-- Dispute letter -->
+          <!-- Ready-to-Send Legal Demand (High-Fidelity PDF Document & Embedded PDF Viewer) -->
           <section aria-label="Dispute Letter" class="bg-white border-2 border-surface-border p-5 sm:p-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b-2 border-surface-border">
               <div>
                 <div class="flex items-center gap-1.5 text-xs font-mono font-semibold text-teal-dark mb-0.5">
                   <i data-lucide="scale" class="w-3.5 h-3.5"></i>
-                  Ready-to-Send Legal Demand
+                  <span id="label-ready-demand">Ready-to-Send Legal Demand</span>
                 </div>
-                <h2 class="font-bold text-base text-ink">Formal Dispute &amp; Financial Assistance Letter</h2>
+                <h2 id="label-dispute-title" class="font-bold text-base text-ink">Formal Dispute &amp; Financial Assistance Letter</h2>
               </div>
               <div class="flex flex-wrap items-center gap-2 no-print">
+                <!-- PDF View Toggle -->
+                <div class="inline-flex border-2 border-surface-border p-0.5 bg-surface">
+                  <button type="button" id="btn-view-sheet" onclick="switchDisputeView('sheet')"
+                    class="px-2.5 py-1 text-[11px] font-semibold bg-navy text-white transition-colors">
+                    Document Sheet
+                  </button>
+                  <button type="button" id="btn-view-embed" onclick="switchDisputeView('embed')"
+                    class="px-2.5 py-1 text-[11px] font-semibold text-ink-muted hover:bg-white transition-colors">
+                    PDF Viewer
+                  </button>
+                </div>
                 <button type="button" id="btn-copy-letter" onclick="copyDisputeLetter()" class="btn-primary !py-1.5 !px-3 !text-xs">
                   <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                   <span id="copy-letter-label">Copy Letter</span>
                 </button>
-                <button type="button" onclick="downloadDisputeLetterPdf()" class="btn-cta !py-1.5 !px-3 !text-xs">
+                <button type="button" id="btn-download-pdf" onclick="downloadDisputeLetterPdf()" class="btn-cta !py-1.5 !px-3 !text-xs">
                   <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
-                  Download PDF
+                  <span id="btn-download-pdf-label">Download PDF</span>
+                </button>
+                <button type="button" onclick="printDisputeLetter()" class="btn-ghost !py-1.5 !px-3 !text-xs">
+                  <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                  <span id="btn-print-pdf-label">Print</span>
                 </button>
               </div>
             </div>
-            <!-- PDF-style letter preview -->
-            <div id="dispute-letter-pdf-preview"
-              class="w-full bg-white border-2 border-surface-border overflow-auto"
-              style="max-height:520px; font-family:'Times New Roman',Times,serif;">
-              <div id="dispute-letter-inner" style="padding:48px 56px; max-width:680px; margin:0 auto; font-size:13px; line-height:1.7; color:#0D1B2A;">
-                <pre id="dispute-letter-text" style="white-space:pre-wrap; font-family:inherit; font-size:inherit; line-height:inherit; margin:0; padding:0; color:inherit; background:transparent; border:none;"></pre>
+
+            <!-- PDF VIEW 1: Formal Legal Document Sheet (US Letter Page) -->
+            <div id="dispute-pdf-sheet-view" class="w-full bg-[#E5E9F0] p-3 sm:p-6 border-2 border-surface-border overflow-auto max-h-[620px]">
+              <div class="bg-white shadow-2xl border border-gray-300 max-w-[720px] mx-auto p-6 sm:p-10 font-serif text-[#0D1B2A] leading-relaxed text-[13px] select-text">
+                <!-- Letterhead Header -->
+                <div class="border-b-2 border-navy pb-3 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-sans">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="w-3 h-3 bg-navy inline-block"></span>
+                      <span class="font-bold text-xs tracking-wider text-navy uppercase">MEDBILL SHIELD · OFFICIAL LEGAL DISPUTE NOTICE</span>
+                    </div>
+                    <div class="text-[11px] text-ink-muted mt-0.5">Compliant with 45 CFR Part 180, CMS NCCI, CA AB 1020 &amp; IRS § 501(r)</div>
+                  </div>
+                  <div class="text-left sm:text-right font-mono text-[11px] text-ink-secondary">
+                    <div>CASE: <strong id="pdf-header-audit-id" class="text-navy">MBS-0000</strong></div>
+                    <div>DATE: <span id="pdf-header-date">2026-10-24</span></div>
+                  </div>
+                </div>
+
+                <!-- Certified Mail & Document Badge -->
+                <div class="bg-surface border border-surface-border px-3.5 py-2 font-mono text-[11px] text-ink-secondary mb-5 flex items-center justify-between">
+                  <span>DISPATCH: Certified Mail Return Receipt Requested &amp; Patient Portal</span>
+                  <span class="text-teal-dark font-semibold">FORM CMS-DISPUTE-2026</span>
+                </div>
+
+                <!-- Recipient & Financial Reconciliation Summary -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 mb-4 border-b border-surface-border font-sans text-xs">
+                  <div>
+                    <span class="text-ink-muted uppercase font-mono text-[10px] block mb-1">Addressee</span>
+                    <strong class="block text-ink text-sm">Patient Financial Services &amp; Compliance</strong>
+                    <div id="pdf-recipient-hospital" class="font-semibold text-navy">Hospital Facility</div>
+                    <div id="pdf-recipient-payer" class="text-ink-secondary text-[11px]">Payer Benchmark</div>
+                  </div>
+                  <div class="sm:text-right font-mono">
+                    <span class="text-ink-muted uppercase text-[10px] block mb-1">Financial Reconciliation</span>
+                    <div class="text-ink-muted text-[11px]">Original Billed: <span id="pdf-stat-billed">$0.00</span></div>
+                    <div class="text-teal-dark font-semibold text-[11px]">Total Reductions: <span id="pdf-stat-deductions">-$0.00</span></div>
+                    <div class="text-navy font-bold text-sm mt-1">Lawful Balance Due: <span id="pdf-stat-balance">$0.00</span></div>
+                  </div>
+                </div>
+
+                <!-- Letter Body -->
+                <div id="pdf-sheet-body" class="space-y-4 whitespace-pre-wrap leading-relaxed text-[13px] font-serif text-[#1A202C]">
+                  <!-- Injected dispute letter text -->
+                </div>
+
+                <!-- Signature Block -->
+                <div class="mt-8 pt-6 border-t-2 border-surface-border font-sans text-xs space-y-2">
+                  <div class="w-56 border-b-2 border-ink pt-6 mb-1"></div>
+                  <div class="font-bold text-ink">[Patient / Authorized Representative Signature]</div>
+                  <div class="text-[11px] text-ink-muted">Account Holder · Dispatched via Certified Mail &amp; Patient Portal</div>
+                  <div class="text-[10px] font-mono text-teal-dark pt-1">✓ Electronically Audited &amp; Formatted by MedBill Shield</div>
+                </div>
               </div>
             </div>
+
+            <!-- PDF VIEW 2: Embedded PDF iframe Viewer -->
+            <div id="dispute-pdf-embed-view" class="hidden w-full border-2 border-surface-border bg-gray-100" style="height:620px;">
+              <iframe id="dispute-pdf-iframe" class="w-full h-full border-none" title="PDF Document Viewer"></iframe>
+            </div>
+
+            <pre id="dispute-letter-text" class="hidden"></pre>
           </section>
 
         </div><!-- /audit-results-wrapper -->
@@ -757,6 +814,258 @@
   <!-- JAVASCRIPT                                                         -->
   <!-- ================================================================= -->
   <script>
+    // ── Multi-Language UI Strings ─────────────────────────────────────────
+    const UI_STRINGS = {
+      English: {
+        hero_title: "Stop overpaying hospital chargemaster rates.",
+        phi_badge: "0 Bytes PHI to Cloud",
+        tech_inspector: "Tech Inspector",
+        card1_title: "Your Coverage & Household",
+        card1_sub: "Values stay locked when you switch bills",
+        hosp_label: "Hospital / Medical Facility",
+        payer_label: "Insurance Plan / Payer",
+        household_label: "Household Size",
+        income_label: "Annual Income",
+        fpl_meter_title: "Charity Care Eligibility",
+        card2_badge: "Stage 1: Offline OCR masks patient identifiers before analysis",
+        card2_title: "Load Bill & Scrub PII On-Device",
+        sample_gallery_label: "Sample Bills Gallery",
+        sample_select_default: "Choose a sample bill...",
+        upload_label: "Upload your own medical bill scan",
+        upload_sub: "JPG · PNG · WEBP — processed locally first",
+        browse_btn: "Browse",
+        original_label: "Original Unredacted Bill",
+        redacted_label: "Redacted Bill (0 Bytes PHI)",
+        btn_redact: "Protect Privacy (Scrub PII On-Device)",
+        btn_analyze: "Audit Medical Bill",
+        re_redact_btn: "Re-run local PII redaction (clears current audit)",
+        orig_hospital_bill: "Original Hospital Bill",
+        gross_chargemaster: "Gross Chargemaster Statement",
+        final_balance_label: "Final Fair Balance to Pay",
+        total_waived_label: "Total Waived:",
+        layer1_title: "Layer 1: Coding & Billing Errors",
+        layer1_sub: "Duplicate charges, illegal bundling & unitemized fees removed",
+        layer2_title: "Layer 2: Price Overcharges",
+        layer2_sub: "Charges lowered to official in-network negotiated rates",
+        subtotal_medical: "Validated Medical Subtotal",
+        layer3_title: "Layer 3: Income Charity Care",
+        line_items_title: "Line-by-Line Procedure Audit",
+        line_items_sub: "Tap any row to inspect statutory citation",
+        inspect_citation: "Inspect statutory citation",
+        plain_meaning_label: "Plain-language meaning:",
+        legal_auth_label: "Legal authority:",
+        rule_eval_label: "Rule evaluation:",
+        medicare_base_label: "CMS Medicare baseline:",
+        ready_demand: "Ready-to-Send Legal Demand",
+        dispute_title: "Formal Dispute & Financial Assistance Letter",
+        btn_view_sheet: "Document Sheet",
+        btn_view_embed: "PDF Viewer",
+        copy_letter_btn: "Copy Letter",
+        download_pdf_btn: "Download PDF",
+        print_pdf_btn: "Print",
+        showcase_title: "Medical billing errors aren't accidents. We audit every code against federal law.",
+        showcase_desc: "Select a sample bill on the left or upload your own scan — on-device OCR scrubs personal data while DuckDB verifies every CPT code in milliseconds.",
+        showcase_btn_cardio: "Try Real Cardiology Bill ($730)",
+        showcase_btn_er: "Bay Area ER Trauma ($10,955)",
+        btn_reanalyze: "Update Audit ↻",
+        translating_msg: "Translating audit to selected language...",
+        status_tags: {
+          NCCI_VIOLATION: "Illegal Unbundling",
+          DUPLICATE: "Duplicate Charge",
+          REVENUE_CODE_ROLLUP: "Unitemized Code",
+          OVERCHARGED: "Overcharged",
+          MISSING_CPT: "Missing CPT Code",
+          VALID: "Verified Fair"
+        }
+      },
+      Spanish: {
+        hero_title: "Deje de pagar de más por tarifas hospitalarias infladas.",
+        phi_badge: "0 Bytes de Datos al Servidor",
+        tech_inspector: "Inspector Técnico",
+        card1_title: "Su Cobertura y Hogar",
+        card1_sub: "Los valores se mantienen al cambiar de factura",
+        hosp_label: "Hospital o Centro Médico",
+        payer_label: "Plan de Seguro Médico",
+        household_label: "Miembros del Hogar",
+        income_label: "Ingreso Familiar Anual",
+        fpl_meter_title: "Elegibilidad para Asistencia Financiera",
+        card2_badge: "Etapa 1: El OCR en el dispositivo oculta datos personales antes del análisis",
+        card2_title: "Cargar Factura y Proteger Datos Privados",
+        sample_gallery_label: "Galería de Facturas de Muestra",
+        sample_select_default: "Seleccionar una factura de muestra...",
+        upload_label: "Suba su propia factura médica",
+        upload_sub: "JPG · PNG · WEBP — procesado localmente primero",
+        browse_btn: "Explorar",
+        original_label: "Factura Original (Solo en Dispositivo)",
+        redacted_label: "Factura Protegida (0 Bytes PHI)",
+        btn_redact: "Proteger Privacidad (Ocultar Datos en Dispositivo)",
+        btn_analyze: "Auditar Factura Médica",
+        re_redact_btn: "Volver a ocultar datos locales (borra auditoría actual)",
+        orig_hospital_bill: "Factura Hospitalaria Original",
+        gross_chargemaster: "Tarifa Bruta de Lista (Chargemaster)",
+        final_balance_label: "Saldo Justo Final a Pagar",
+        total_waived_label: "Total Ahorrado:",
+        layer1_title: "Capa 1: Errores de Codificación y Facturación",
+        layer1_sub: "Se eliminan cargos duplicados, desglose indebido y códigos genéricos",
+        layer2_title: "Capa 2: Sobreprecios sobre Tarifas Negociadas",
+        layer2_sub: "Cargos reducidos a las tarifas negociadas oficiales de aseguradoras",
+        subtotal_medical: "Subtotal Médico Validado",
+        layer3_title: "Capa 3: Asistencia Financiera por Ingresos",
+        line_items_title: "Auditoría Detallada por Procedimiento",
+        line_items_sub: "Toque cualquier fila para ver la base legal",
+        inspect_citation: "Inspeccionar base legal y normativa",
+        plain_meaning_label: "Significado sencillo:",
+        legal_auth_label: "Fundamento legal:",
+        rule_eval_label: "Evaluación de norma:",
+        medicare_base_label: "Base federal Medicare:",
+        ready_demand: "Demanda Legal Lista para Enviar",
+        dispute_title: "Carta Formal de Disputa y Asistencia Financiera",
+        btn_view_sheet: "Hoja de Documento",
+        btn_view_embed: "Visor PDF",
+        copy_letter_btn: "Copiar Carta",
+        download_pdf_btn: "Descargar PDF",
+        print_pdf_btn: "Imprimir",
+        showcase_title: "Los errores de facturación médica no son casuales. Auditamos cada código contra la ley.",
+        showcase_desc: "Elija una factura de muestra o suba su propio documento: el OCR en el dispositivo protege sus datos mientras DuckDB verifica cada código CPT.",
+        showcase_btn_cardio: "Ver Factura Real de Cardiología ($730)",
+        showcase_btn_er: "Factura de Emergencias ($10,955)",
+        btn_reanalyze: "Actualizar Auditoría ↻",
+        translating_msg: "Traduciendo auditoría al idioma seleccionado...",
+        status_tags: {
+          NCCI_VIOLATION: "Desglose Ilegal",
+          DUPLICATE: "Cobro Duplicado",
+          REVENUE_CODE_ROLLUP: "Código No Desglosado",
+          OVERCHARGED: "Sobreprecio",
+          MISSING_CPT: "Falta Código CPT",
+          VALID: "Tarifa Verificada Justa"
+        }
+      },
+      Vietnamese: {
+        hero_title: "Ngừng trả giá viện phí cắt cổ theo bảng giá gốc của bệnh viện.",
+        phi_badge: "0 Byte Dữ liệu Cá nhân lên Đám mây",
+        tech_inspector: "Thanh tra Kỹ thuật",
+        card1_title: "Thông tin Bảo hiểm & Hộ gia đình",
+        card1_sub: "Dữ liệu được lưu giữ khi bạn đổi hóa đơn khác",
+        hosp_label: "Bệnh viện / Cơ sở Y tế",
+        payer_label: "Gói Bảo hiểm Y tế",
+        household_label: "Số người trong Hộ gia đình",
+        income_label: "Thu nhập Hàng năm",
+        fpl_meter_title: "Đủ điều kiện Hỗ trợ Viện phí Từ thiện",
+        card2_badge: "Bước 1: OCR trên máy xóa thông tin cá nhân trước khi phân tích",
+        card2_title: "Tải Hóa đơn & Xóa Thông tin Riêng tư trên Máy",
+        sample_gallery_label: "Thư viện Hóa đơn Mẫu",
+        sample_select_default: "Chọn một hóa đơn mẫu...",
+        upload_label: "Tải lên ảnh chụp hóa đơn của bạn",
+        upload_sub: "JPG · PNG · WEBP — xử lý nội bộ an toàn trên máy",
+        browse_btn: "Chọn tệp",
+        original_label: "Hóa đơn Gốc (Chỉ trên máy bạn)",
+        redacted_label: "Hóa đơn Đã bảo vệ (0 Byte PHI)",
+        btn_redact: "Bảo vệ Quyền riêng tư (Xóa Thông tin trên Máy)",
+        btn_analyze: "Kiểm toán Hóa đơn Y tế",
+        re_redact_btn: "Xóa lại thông tin cá nhân (làm mới kiểm toán)",
+        orig_hospital_bill: "Hóa đơn Gốc của Bệnh viện",
+        gross_chargemaster: "Bảng giá Niêm yết Chưa chiết khấu",
+        final_balance_label: "Số tiền Thực tế Hợp lý Cần Trả",
+        total_waived_label: "Tổng Tiết kiệm được:",
+        layer1_title: "Lớp 1: Lỗi Mã hóa & Tách Phí Trái phép",
+        layer1_sub: "Loại bỏ tính trùng lặp, tách gói trái phép theo CMS NCCI",
+        layer2_title: "Lớp 2: Giá vượt mức Thỏa thuận",
+        layer2_sub: "Hạ giá về đúng mức niêm yết thỏa thuận của bảo hiểm",
+        subtotal_medical: "Tạm tính sau Kiểm tra Y tế",
+        layer3_title: "Lớp 3: Giảm nghèo / Hỗ trợ Viện phí",
+        line_items_title: "Kiểm toán Chi tiết Từng Dịch vụ",
+        line_items_sub: "Nhấn vào từng dòng để xem căn cứ luật định",
+        inspect_citation: "Xem căn cứ pháp lý & quy định",
+        plain_meaning_label: "Ý nghĩa dễ hiểu:",
+        legal_auth_label: "Căn cứ pháp luật:",
+        rule_eval_label: "Kết luận kiểm toán:",
+        medicare_base_label: "Mức chuẩn Medicare:",
+        ready_demand: "Văn bản Pháp lý Sẵn sàng Gửi",
+        dispute_title: "Thư Khiếu nại Chính thức & Xin Hỗ trợ Viện phí",
+        btn_view_sheet: "Trang Văn bản",
+        btn_view_embed: "Trình đọc PDF",
+        copy_letter_btn: "Sao chép Thư",
+        download_pdf_btn: "Tải tệp PDF",
+        print_pdf_btn: "In",
+        showcase_title: "Sai sót viện phí không phải ngẫu nhiên. Chúng tôi đối chiếu từng mã với luật liên bang.",
+        showcase_desc: "Chọn một hóa đơn mẫu hoặc tải lên hóa đơn của bạn — OCR trên máy bảo vệ tuyệt đối thông tin cá nhân trong khi DuckDB kiểm toán từng mã CPT.",
+        showcase_btn_cardio: "Thử Hóa đơn Tim mạch ($730)",
+        showcase_btn_er: "Hóa đơn Cấp cứu Vùng Vịnh ($10,955)",
+        btn_reanalyze: "Cập nhật Kiểm toán ↻",
+        translating_msg: "Đang chuyển ngữ kiểm toán sang ngôn ngữ đã chọn...",
+        status_tags: {
+          NCCI_VIOLATION: "Tách Dịch vụ Trái phép",
+          DUPLICATE: "Tính Tiền Trùng lặp",
+          REVENUE_CODE_ROLLUP: "Gom Khoản Thiếu Chi tiết",
+          OVERCHARGED: "Tính Vượt Giá Thỏa thuận",
+          MISSING_CPT: "Thiếu Mã Thủ thuật CPT",
+          VALID: "Mức Giá Hợp lệ"
+        }
+      },
+      Russian: {
+        hero_title: "Хватит переплачивать по завышенным больничным тарифам.",
+        phi_badge: "0 Байт Персональных Данных в Облако",
+        tech_inspector: "Технический инспектор",
+        card1_title: "Ваша страховка и семья",
+        card1_sub: "Значения сохраняются при смене счета",
+        hosp_label: "Больница / Медицинский центр",
+        payer_label: "Страховая компания / План",
+        household_label: "Количество членов семьи",
+        income_label: "Годовой доход семьи",
+        fpl_meter_title: "Право на благотворительную помощь",
+        card2_badge: "Этап 1: Локальное распознавание скрывает данные до отправки",
+        card2_title: "Загрузка счета и защита личных данных",
+        sample_gallery_label: "Галерея примеров счетов",
+        sample_select_default: "Выберите пример счета...",
+        upload_label: "Загрузите фото или скан медицинского счета",
+        upload_sub: "JPG · PNG · WEBP — первичная обработка только на вашем устройстве",
+        browse_btn: "Обзор",
+        original_label: "Исходный счет (Локально на устройстве)",
+        redacted_label: "Защищенный счет (0 Байт ПДн)",
+        btn_redact: "Защитить данные (Скрыть ПДн на устройстве)",
+        btn_analyze: "Аудит медицинского счета",
+        re_redact_btn: "Повторить скрытие данных (сбросит текущий аудит)",
+        orig_hospital_bill: "Исходный счет больницы",
+        gross_chargemaster: "Полная сумма по прейскуранту (Chargemaster)",
+        final_balance_label: "Справедливая сумма к оплате",
+        total_waived_label: "Всего списано:",
+        layer1_title: "Уровень 1: Ошибки кодирования и начисления",
+        layer1_sub: "Удалены дубли, незаконное разделение процедур и необоснованные сборы",
+        layer2_title: "Уровень 2: Завышение тарифов сверх нормативов",
+        layer2_sub: "Цены снижены до официальных согласованных страховых тарифов MRF",
+        subtotal_medical: "Проверенный медицинский итог",
+        layer3_title: "Уровень 3: Благотворительная помощь по доходу",
+        line_items_title: "Построчный аудит процедур",
+        line_items_sub: "Нажмите на строку для просмотра нормативных актов",
+        inspect_citation: "Посмотреть правовое основание",
+        plain_meaning_label: "Понятное описание:",
+        legal_auth_label: "Правовая норма:",
+        rule_eval_label: "Результат проверки:",
+        medicare_base_label: "Базовый тариф Medicare:",
+        ready_demand: "Готовая юридическая претензия",
+        dispute_title: "Официальная претензия и заявление на помощь",
+        btn_view_sheet: "Лист документа",
+        btn_view_embed: "Просмотр PDF",
+        copy_letter_btn: "Скопировать письмо",
+        download_pdf_btn: "Скачать PDF",
+        print_pdf_btn: "Печать",
+        showcase_title: "Ошибки в счетах — не случайность. Мы проверяем каждый код по закону.",
+        showcase_desc: "Выберите пример счета слева или загрузите свой скан — локальное скрытие защищает персональные данные, а DuckDB проверяет начисления за миллисекунды.",
+        showcase_btn_cardio: "Реальный кардиологический счет ($730)",
+        showcase_btn_er: "Счет скорой помощи ($10,955)",
+        btn_reanalyze: "Обновить расчет ↻",
+        translating_msg: "Перевод аудита на выбранный язык...",
+        status_tags: {
+          NCCI_VIOLATION: "Незаконное разделение",
+          DUPLICATE: "Дублирующий счет",
+          REVENUE_CODE_ROLLUP: "Недетализированный сбор",
+          OVERCHARGED: "Завышение тарифа",
+          MISSING_CPT: "Отсутствует код CPT",
+          VALID: "Обоснованный тариф"
+        }
+      }
+    };
+
     // ── State ────────────────────────────────────────────────────────────
     let currentRedactionId = "";
     let currentOriginalB64 = "";
@@ -764,19 +1073,19 @@
     let currentPrivacyMeta = {};
     let currentSelectedFile = null;
     let currentSelectedSampleFilename = "";
-    let lastAuditSource = null;   // 'stage2' | 'demo'
-    let lastDemoId = "";
+    let lastAuditSource = null;   // 'stage2'
     let userManuallyChangedHospital = false;
     let userManuallyChangedPayer = false;
-    let _demosRunning = false;
+    let currentAuditReport = null; // cached report for live slider & instant language updates
+    let activeDisputePdfBlobUrl = null;
 
     const AUTO_DETECT = "Auto-Detect from Bill";
 
     // ── Init ─────────────────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", async () => {
       refreshIcons();
-      syncSliderDisplays();
-      updateLiveFplPill();
+      onHouseholdSizeChanged(); // sets dynamic relative scale for income
+      applyUiTranslations(document.getElementById("language").value || "English");
       bindContextListeners();
       await loadSampleBillsAndMeta();
       if (window.gsap) {
@@ -808,26 +1117,93 @@
       if (d.open) d.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
-    // ── Slider display sync ───────────────────────────────────────────────
-    function syncSliderDisplays() {
-      const income = Math.max(0, parseFloat(document.getElementById("annual_income").value || "0"));
-      const size   = Math.max(1, parseInt(document.getElementById("household_size").value || "1", 10));
-      document.getElementById("income-display").textContent =
-        "$" + income.toLocaleString("en-US");
-      document.getElementById("household-display").textContent =
-        size + (size === 1 ? " person" : " people");
-    }
-
+    // ── Dynamic Relative Sliders: Household Size -> Income Scale ──────────
     function adjustHousehold(delta) {
       const el = document.getElementById("household_size");
-      const cur = parseInt(el.value || "1", 10);
+      const cur = parseInt(el.value || "3", 10);
       el.value = Math.min(10, Math.max(1, cur + delta));
+      onHouseholdSizeChanged();
+    }
+
+    function onHouseholdSizeChanged() {
+      const sizeEl = document.getElementById("household_size");
+      const incomeEl = document.getElementById("annual_income");
+      const size = Math.max(1, parseInt(sizeEl.value || "3", 10));
+
+      // 2026 FPL formula: base = 15,650 + (size - 1) * 5,500
+      // 0% charity care discount threshold is 400% FPL (4.0 * fplBase)
+      const fplBase = 15650 + (size - 1) * 5500;
+      const zeroDiscountIncome = 4.0 * fplBase;
+
+      // Dynamic max: allows sliding up to and beyond the exact number where discount is 0%
+      // With generous 1.35x buffer rounded to nearest $10k
+      const newMax = Math.max(100000, Math.ceil((zeroDiscountIncome * 1.35) / 10000) * 10000);
+      const prevMax = parseFloat(incomeEl.max || "150000");
+      const curVal = parseFloat(incomeEl.value || "48000");
+
+      incomeEl.max = newMax;
+      // If user was at the previous max, advance them to new max; if value exceeds new max, clamp
+      if (curVal >= prevMax - 1000) {
+        incomeEl.value = newMax;
+      } else if (curVal > newMax) {
+        incomeEl.value = newMax;
+      }
+
       syncSliderDisplays();
       updateLiveFplPill();
+      recalculateActiveAuditCharityCare();
       showUpdateButtonIfAudited();
     }
 
-    // ── FPL meter ─────────────────────────────────────────────────────────
+    function onAnnualIncomeChanged() {
+      syncSliderDisplays();
+      updateLiveFplPill();
+      recalculateActiveAuditCharityCare();
+      showUpdateButtonIfAudited();
+    }
+
+    function syncSliderDisplays() {
+      const incomeEl = document.getElementById("annual_income");
+      const sizeEl   = document.getElementById("household_size");
+      const income   = Math.max(0, parseFloat(incomeEl.value || "0"));
+      const maxInc   = parseFloat(incomeEl.max || "150000");
+      const size     = Math.max(1, parseInt(sizeEl.value || "1", 10));
+      const lang     = document.getElementById("language").value || "English";
+
+      // Household label
+      const personWord = (size === 1)
+        ? (lang === "Spanish" ? "persona" : lang === "Vietnamese" ? "người" : lang === "Russian" ? "человек" : "person")
+        : (lang === "Spanish" ? "personas" : lang === "Vietnamese" ? "người" : lang === "Russian" ? "человек" : "people");
+
+      const hDisplay = document.getElementById("household-display");
+      if (size >= 10) {
+        hDisplay.textContent = `10+ ${personWord}`;
+      } else if (size <= 1) {
+        hDisplay.textContent = `1- ${personWord}`;
+      } else {
+        hDisplay.textContent = `${size} ${personWord}`;
+      }
+
+      // Income display: top value shows +, bottom value shows -
+      const iDisplay = document.getElementById("income-display");
+      if (income >= maxInc) {
+        iDisplay.textContent = "$" + Math.round(maxInc).toLocaleString("en-US") + "+";
+      } else if (income <= 0) {
+        iDisplay.textContent = "$0-";
+      } else {
+        iDisplay.textContent = "$" + Math.round(income).toLocaleString("en-US");
+      }
+
+      // Dynamic scale ticks
+      const minTick = document.getElementById("income-tick-min");
+      const midTick = document.getElementById("income-tick-mid");
+      const maxTick = document.getElementById("income-tick-max");
+      if (minTick) minTick.textContent = "$0-";
+      if (midTick) midTick.textContent = "$" + Math.round(maxInc / 2 / 1000) + "k";
+      if (maxTick) maxTick.textContent = "$" + Math.round(maxInc / 1000) + "k+";
+    }
+
+    // ── FPL Meter & Live Charity Care Recalculation ────────────────────────
     function updateLiveFplPill() {
       const income = Math.max(0, parseFloat(document.getElementById("annual_income").value || "0"));
       const size   = Math.max(1, parseInt(document.getElementById("household_size").value || "1", 10));
@@ -848,19 +1224,164 @@
         barEl.className = "h-full bg-cobalt-DEFAULT transition-all duration-300";
       } else {
         textEl.className = "font-mono font-medium text-ink-muted";
-        textEl.textContent = `${fplPct}% FPL · Standard MRF Protection`;
+        textEl.textContent = `${fplPct}% FPL · 0% Charity Care (Standard Rate)`;
         barEl.className = "h-full bg-ink-muted transition-all duration-300";
+      }
+    }
+
+    function recalculateActiveAuditCharityCare() {
+      if (!currentAuditReport) return;
+      const income = Math.max(0, parseFloat(document.getElementById("annual_income").value || "0"));
+      const size   = Math.max(1, parseInt(document.getElementById("household_size").value || "1", 10));
+      const fplBase = 15650 + (size - 1) * 5500;
+      const fplPct  = (income / fplBase) * 100;
+
+      let discountPct = 0;
+      if (fplPct <= 200) discountPct = 100;
+      else if (fplPct <= 400) discountPct = 65;
+
+      const subtotalL2 = Number(currentAuditReport.subtotal_after_layer_2 || 0);
+      const l3Forgiveness = Math.round(subtotalL2 * (discountPct / 100) * 100) / 100;
+      const finalBal = Math.max(0, Math.round((subtotalL2 - l3Forgiveness) * 100) / 100);
+      const totalSavings = (Number(currentAuditReport.layer_1_coding_errors_removed || 0) +
+                            Number(currentAuditReport.layer_2_mrf_overcharge_removed || 0) +
+                            l3Forgiveness);
+      const totalBilled = Number(currentAuditReport.total_billed || 0);
+      const savingsPct = totalBilled > 0 ? Math.round((totalSavings / totalBilled) * 100) : 0;
+
+      // Update in-memory report
+      currentAuditReport.layer_3_charity_care_forgiveness = l3Forgiveness;
+      currentAuditReport.final_patient_balance = finalBal;
+      currentAuditReport.total_savings = totalSavings;
+      if (currentAuditReport.charity_care) {
+        currentAuditReport.charity_care.user_fpl_pct = Math.round(fplPct * 10) / 10;
+        currentAuditReport.charity_care.discount_pct = discountPct;
+        currentAuditReport.charity_care.eligible = discountPct > 0;
+        currentAuditReport.charity_care.annual_income = income;
+        currentAuditReport.charity_care.household_size = size;
+      }
+
+      // Update UI elements in financial card
+      document.getElementById("receipt-final-balance").textContent = formatCurrency(finalBal);
+      document.getElementById("receipt-total-savings").textContent = formatCurrency(totalSavings);
+      document.getElementById("receipt-savings-pct").textContent = `(${savingsPct}% off)`;
+      document.getElementById("receipt-layer3-deduction").textContent = "-" + formatCurrency(l3Forgiveness);
+      document.getElementById("charity-fpl-display").textContent = `${Math.round(fplPct)}% FPL`;
+      document.getElementById("receipt-charity-badge").textContent = discountPct > 0
+        ? `${discountPct}% Forgiven (${Math.round(fplPct)}% FPL)`
+        : `${Math.round(fplPct)}% FPL`;
+
+      // Update PDF reconciliation box
+      const pdfBilled = document.getElementById("pdf-stat-billed");
+      const pdfDeduct = document.getElementById("pdf-stat-deductions");
+      const pdfBal    = document.getElementById("pdf-stat-balance");
+      if (pdfBilled) pdfBilled.textContent = formatCurrency(totalBilled);
+      if (pdfDeduct) pdfDeduct.textContent = "-" + formatCurrency(totalSavings);
+      if (pdfBal)    pdfBal.textContent    = formatCurrency(finalBal);
+    }
+
+    // ── UI Multi-Language Translation ─────────────────────────────────────
+    function applyUiTranslations(lang) {
+      const s = UI_STRINGS[lang] || UI_STRINGS.English;
+      const setTxt = (id, txt) => {
+        const el = document.getElementById(id);
+        if (el && txt != null) el.textContent = txt;
+      };
+
+      setTxt("hero-main-title", s.hero_title);
+      setTxt("header-phi-badge-text", s.phi_badge);
+      setTxt("header-tech-inspector-text", s.tech_inspector);
+
+      setTxt("card1-title-text", s.card1_title);
+      setTxt("card1-sub-text", s.card1_sub);
+      setTxt("label-hospital-text", s.hosp_label);
+      setTxt("label-payer-text", s.payer_label);
+      setTxt("label-household-text", s.household_label);
+      setTxt("label-income-text", s.income_label);
+      setTxt("fpl-meter-title-text", s.fpl_meter_title);
+      setTxt("btn-reanalyze-text", s.btn_reanalyze);
+
+      setTxt("stage-heading", s.card2_title);
+      setTxt("stage-step-badge", s.card2_badge);
+      setTxt("label-sample-gallery-text", s.sample_gallery_label);
+      setTxt("upload-filename-label", s.upload_label);
+      setTxt("upload-sub-label", s.upload_sub);
+      setTxt("upload-browse-btn-text", s.browse_btn);
+      setTxt("preview-mode-label", s.original_label);
+      setTxt("btn-redact-label", s.btn_redact);
+      setTxt("btn-analyze-label", s.btn_analyze);
+      setTxt("btn-reset-stage1-text", s.re_redact_btn);
+
+      setTxt("showcase-main-title", s.showcase_title);
+      setTxt("showcase-main-desc", s.showcase_desc);
+      setTxt("showcase-btn-cardio-text", s.showcase_btn_cardio);
+      setTxt("showcase-btn-er-text", s.showcase_btn_er);
+
+      setTxt("label-orig-hospital-bill", s.orig_hospital_bill);
+      setTxt("label-gross-chargemaster", s.gross_chargemaster);
+      setTxt("label-layer1-title", s.layer1_title);
+      setTxt("receipt-layer1-subtext", s.layer1_sub);
+      setTxt("label-layer2-title", s.layer2_title);
+      setTxt("receipt-layer2-subtext", s.layer2_sub);
+      setTxt("label-subtotal-medical", s.subtotal_medical);
+      setTxt("label-layer3-title", s.layer3_title);
+
+      setTxt("label-line-items-title", s.line_items_title);
+      setTxt("label-line-items-sub", s.line_items_sub);
+      setTxt("label-ready-demand", s.ready_demand);
+      setTxt("label-dispute-title", s.dispute_title);
+
+      setTxt("btn-view-sheet", s.btn_view_sheet);
+      setTxt("btn-view-embed", s.btn_view_embed);
+      setTxt("copy-letter-label", s.copy_letter_btn);
+      setTxt("btn-download-pdf-label", s.download_pdf_btn);
+      setTxt("btn-print-pdf-label", s.print_pdf_btn);
+
+      syncSliderDisplays();
+      updateLiveFplPill();
+      refreshIcons();
+    }
+
+    async function onLanguageChanged(newLang) {
+      applyUiTranslations(newLang);
+      if (!currentAuditReport) return;
+
+      const s = UI_STRINGS[newLang] || UI_STRINGS.English;
+      showStatusBanner(s.translating_msg, "info");
+
+      try {
+        const res = await fetch("/api/audit/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            audit_report: currentAuditReport,
+            language: newLang,
+          }),
+        });
+
+        if (res.ok) {
+          const updatedReport = await res.json();
+          currentAuditReport = updatedReport;
+          renderAuditReport(updatedReport);
+        } else {
+          // Fallback in-place re-render
+          currentAuditReport.language = newLang;
+          renderAuditReport(currentAuditReport);
+        }
+      } catch (err) {
+        console.warn("Language translation fetch error, re-rendering in place:", err);
+        currentAuditReport.language = newLang;
+        renderAuditReport(currentAuditReport);
+      } finally {
+        hideStatusBanner();
       }
     }
 
     // ── Listeners ─────────────────────────────────────────────────────────
     function bindContextListeners() {
-      document.getElementById("annual_income").addEventListener("input", () => {
-        syncSliderDisplays(); updateLiveFplPill(); showUpdateButtonIfAudited();
-      });
-      document.getElementById("household_size").addEventListener("input", () => {
-        syncSliderDisplays(); updateLiveFplPill(); showUpdateButtonIfAudited();
-      });
+      document.getElementById("household_size").addEventListener("input", onHouseholdSizeChanged);
+      document.getElementById("annual_income").addEventListener("input", onAnnualIncomeChanged);
+
       document.getElementById("hospital_name").addEventListener("change", () => {
         userManuallyChangedHospital = (document.getElementById("hospital_name").value !== AUTO_DETECT);
         showUpdateButtonIfAudited();
@@ -869,12 +1390,12 @@
         userManuallyChangedPayer = (document.getElementById("payer_name").value !== AUTO_DETECT);
         showUpdateButtonIfAudited();
       });
-      // Language change: re-run audit bypassing the _demosRunning guard
-      document.getElementById("language").addEventListener("change", () => {
-        if (!document.getElementById("audit-results-wrapper").classList.contains("hidden")) {
-          reanalyzeWithLanguage();
-        }
+
+      // Language change listener: immediately applies translations and translates active audit
+      document.getElementById("language").addEventListener("change", (e) => {
+        onLanguageChanged(e.target.value);
       });
+
       // File upload
       document.getElementById("bill_file_input").addEventListener("change", (e) => {
         const file = e.target.files && e.target.files[0];
@@ -889,6 +1410,7 @@
         reader.onload = (ev) => prepareStage1Preview(ev.target.result);
         reader.readAsDataURL(file);
       });
+
       // Sample gallery
       document.getElementById("sample_bill_select").addEventListener("change", (e) => {
         const f = e.target.value;
@@ -901,7 +1423,8 @@
       currentSelectedFile = null;
       document.getElementById("bill_file_input").value = "";
       document.getElementById("sample_bill_select").value = filename;
-      document.getElementById("upload-filename-label").textContent = "Upload your own medical bill scan";
+      const s = UI_STRINGS[document.getElementById("language").value || "English"] || UI_STRINGS.English;
+      document.getElementById("upload-filename-label").textContent = s.upload_label;
       if (!userManuallyChangedHospital) document.getElementById("hospital_name").value = AUTO_DETECT;
       if (!userManuallyChangedPayer)   document.getElementById("payer_name").value = AUTO_DETECT;
       prepareStage1Preview(`/api/sample-bills/${encodeURIComponent(filename)}`);
@@ -925,7 +1448,8 @@
         const data = await res.json();
         const samples = data.sample_bills || [];
         const sel = document.getElementById("sample_bill_select");
-        document.getElementById("sample-count-badge").textContent = `(${samples.length} available)`;
+        const countBadge = document.getElementById("sample-count-badge");
+        if (countBadge) countBadge.textContent = `(${samples.length} available)`;
         samples.forEach((s) => {
           const opt = document.createElement("option");
           opt.value = s.filename;
@@ -959,11 +1483,14 @@
       currentRedactionId = ""; currentOriginalB64 = imgSrc; currentRedactedB64 = ""; currentPrivacyMeta = {};
       const ws = document.getElementById("document-stage-workspace");
       ws.classList.remove("hidden");
-      document.getElementById("stage-step-badge").textContent = "Stage 1 of 2 · Ready for on-device PII redaction";
-      document.getElementById("stage-heading").textContent = "Preview Bill & Scrub Personal Data";
+      const lang = document.getElementById("language").value || "English";
+      const s = UI_STRINGS[lang] || UI_STRINGS.English;
+
+      document.getElementById("stage-step-badge").textContent = s.card2_badge;
+      document.getElementById("stage-heading").textContent = s.card2_title;
       document.getElementById("stage-preview-img").src = imgSrc;
       document.getElementById("preview-mode-dot").className = "w-2 h-2 bg-warn-DEFAULT";
-      document.getElementById("preview-mode-label").textContent = "Original Unredacted Bill";
+      document.getElementById("preview-mode-label").textContent = s.original_label;
       document.getElementById("preview-toggle-group").classList.add("hidden");
       document.getElementById("stage-info-step1").classList.remove("hidden");
       document.getElementById("stage-info-step2").classList.add("hidden");
@@ -980,22 +1507,24 @@
       const labelEl = document.getElementById("preview-mode-label");
       const btnR = document.getElementById("btn-show-redacted");
       const btnO = document.getElementById("btn-show-original");
+      const lang = document.getElementById("language").value || "English";
+      const s = UI_STRINGS[lang] || UI_STRINGS.English;
+
       if (mode === "original" && currentOriginalB64) {
         imgEl.src = currentOriginalB64;
         dotEl.className = "w-2 h-2 bg-warn-DEFAULT";
-        labelEl.textContent = "Original Bill (Local Device Only)";
+        labelEl.textContent = s.original_label;
         btnO.className = "px-2.5 py-1 text-[11px] font-semibold bg-navy text-white transition-colors";
         btnR.className = "px-2.5 py-1 text-[11px] font-semibold text-ink-muted hover:bg-surface transition-colors";
       } else if (currentRedactedB64) {
         imgEl.src = currentRedactedB64;
         dotEl.className = "w-2 h-2 bg-teal";
-        labelEl.textContent = "Redacted Bill (0 Bytes PHI)";
+        labelEl.textContent = s.redacted_label;
         btnR.className = "px-2.5 py-1 text-[11px] font-semibold bg-navy text-white transition-colors";
         btnO.className = "px-2.5 py-1 text-[11px] font-semibold text-ink-muted hover:bg-surface transition-colors";
       }
     }
 
-    // ── Confirm before resetting stage 1 after audit ──────────────────────
     function confirmResetStage1() {
       const hasResults = !document.getElementById("audit-results-wrapper").classList.contains("hidden");
       if (hasResults && !confirm("Re-running PII redaction will clear your current audit results. Continue?")) return;
@@ -1031,6 +1560,9 @@
         currentOriginalB64 = data.original_image_base64 || currentOriginalB64;
         currentRedactedB64 = data.redacted_image_base64;
         currentPrivacyMeta = data.privacy_meta || {};
+
+        const lang = document.getElementById("language").value || "English";
+        const s = UI_STRINGS[lang] || UI_STRINGS.English;
 
         document.getElementById("stage-step-badge").textContent = "Stage 2 of 2 · Privacy verified";
         document.getElementById("stage-heading").textContent = "Inspect Sanitized Bill & Run Audit";
@@ -1106,10 +1638,18 @@
           household_size: isNaN(householdSize) ? 3 : householdSize,
           language,
         };
-        const res = await fetch("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || "Audit failed."); }
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || "Audit failed.");
+        }
         const report = await res.json();
         lastAuditSource = "stage2";
+        currentAuditReport = report;
         renderAuditReport(report);
       } catch (err) {
         document.getElementById("audit-results-wrapper").classList.add("hidden");
@@ -1121,56 +1661,11 @@
       }
     }
 
-    // ── Demo ──────────────────────────────────────────────────────────────
-    async function runDemoScenario(demoId) {
-      if (_demosRunning) return;
-      _demosRunning = true;
-      ["demo-btn-1","demo-btn-2","demo-btn-3"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.disabled = true;
-      });
-      hideStatusBanner();
-      lastAuditSource = "demo";
-      lastDemoId = demoId;
-      showStatusBanner("Running 3-layer DuckDB audit on preset scenario...", "info");
-
-      try {
-        const hospEl = document.getElementById("hospital_name");
-        const payerEl = document.getElementById("payer_name");
-        const income = parseFloat(document.getElementById("annual_income").value || "48000");
-        const householdSize = parseInt(document.getElementById("household_size").value || "3", 10);
-        const language = document.getElementById("language").value || "English";
-        const res = await fetch("/api/audit/demo", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            demo_id: demoId,
-            hospital_name: userManuallyChangedHospital ? hospEl.value : AUTO_DETECT,
-            payer_name:    userManuallyChangedPayer    ? payerEl.value : AUTO_DETECT,
-            annual_income: isNaN(income) ? 48000 : income,
-            household_size: isNaN(householdSize) ? 3 : householdSize,
-            language,
-          }),
-        });
-        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || "Demo audit failed."); }
-        const report = await res.json();
-        hideStatusBanner();
-        renderAuditReport(report);
-      } catch (err) {
-        showStatusBanner(err.message || "Error running demo.", "error");
-      } finally {
-        _demosRunning = false;
-        ["demo-btn-1","demo-btn-2","demo-btn-3"].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.disabled = false;
-        });
-      }
-    }
-
     async function reanalyzeIfReady() {
       document.getElementById("btn-reanalyze-context").classList.add("hidden");
-      if (lastAuditSource === "stage2" && (currentRedactionId || currentRedactedB64)) await runStage2Analyze();
-      else if (lastAuditSource === "demo" && lastDemoId) await runDemoScenario(lastDemoId);
+      if (lastAuditSource === "stage2" && (currentRedactionId || currentRedactedB64)) {
+        await runStage2Analyze();
+      }
     }
 
     async function resetToAutoDetectAndReanalyze() {
@@ -1181,54 +1676,197 @@
       await reanalyzeIfReady();
     }
 
-    // ── Language re-run: bypasses _demosRunning so changing language always works ──
-    async function reanalyzeWithLanguage() {
-      // Temporarily reset the running guard so language re-run always fires
-      const wasRunning = _demosRunning;
-      _demosRunning = false;
-      showStatusBanner("Translating audit to new language...", "info");
-      await reanalyzeIfReady();
-      hideStatusBanner();
-      // Restore guard only if a demo was actually running (edge case)
-      if (wasRunning) _demosRunning = false; // don't restore true — the re-run finished
+    // ── PDF Generation & Document Preview ─────────────────────────────────
+    function switchDisputeView(mode) {
+      const sheetView = document.getElementById("dispute-pdf-sheet-view");
+      const embedView = document.getElementById("dispute-pdf-embed-view");
+      const btnSheet  = document.getElementById("btn-view-sheet");
+      const btnEmbed  = document.getElementById("btn-view-embed");
+
+      if (mode === "sheet") {
+        sheetView.classList.remove("hidden");
+        embedView.classList.add("hidden");
+        btnSheet.className = "px-2.5 py-1 text-[11px] font-semibold bg-navy text-white transition-colors";
+        btnEmbed.className = "px-2.5 py-1 text-[11px] font-semibold text-ink-muted hover:bg-white transition-colors";
+      } else {
+        sheetView.classList.add("hidden");
+        embedView.classList.remove("hidden");
+        btnEmbed.className = "px-2.5 py-1 text-[11px] font-semibold bg-navy text-white transition-colors";
+        btnSheet.className = "px-2.5 py-1 text-[11px] font-semibold text-ink-muted hover:bg-white transition-colors";
+      }
     }
 
-    // ── PDF download using browser print-to-PDF on a hidden iframe ────────
+    function generateDisputePdf(report) {
+      if (!window.jspdf) return null;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+
+      const margin = 45;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const contentWidth = pageWidth - margin * 2;
+
+      // Header Banner
+      doc.setFillColor(27, 58, 107); // Navy #1B3A6B
+      doc.rect(margin, 36, contentWidth, 24, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(255, 255, 255);
+      doc.text("MEDBILL SHIELD · FORMAL LEGAL DISPUTE & COMPLIANCE DEMAND", margin + 10, 52);
+
+      // Metadata Header
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(90, 100, 115);
+      doc.text(`CASE REF: ${report.audit_id || "MBS-DEMAND"}`, margin, 78);
+      const dateStr = (report.timestamp ? report.timestamp.split("T")[0] : new Date().toISOString().split("T")[0]);
+      doc.text(`DATE: ${dateStr}`, pageWidth - margin - 110, 78);
+
+      doc.setDrawColor(216, 222, 233);
+      doc.setLineWidth(1);
+      doc.line(margin, 86, pageWidth - margin, 86);
+
+      // Addressee info
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(13, 27, 42);
+      doc.text("TO: Patient Financial Services, Revenue Integrity & Compliance Department", margin, 106);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${report.hospital_name} · Plan Benchmark: ${report.payer_name}`, margin, 120);
+
+      // Financial Reconciliation box
+      doc.setFillColor(245, 247, 250);
+      doc.rect(margin, 132, contentWidth, 28, "F");
+      doc.setDrawColor(216, 222, 233);
+      doc.rect(margin, 132, contentWidth, 28, "S");
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(58, 74, 92);
+      doc.text(`Original Billed: ${formatCurrency(report.total_billed)}`, margin + 10, 150);
+      doc.setTextColor(18, 122, 128);
+      doc.text(`Total Reductions: -${formatCurrency(report.total_savings)}`, margin + 175, 150);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(27, 58, 107);
+      doc.text(`Lawful Patient Balance Due: ${formatCurrency(report.final_patient_balance)}`, margin + 350, 150);
+
+      // Letter text
+      const letterText = report.dispute_letter || "";
+      doc.setFont("times", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(20, 30, 45);
+
+      const lines = doc.splitTextToSize(letterText, contentWidth);
+      let y = 180;
+      const lineHeight = 13.5;
+
+      for (let i = 0; i < lines.length; i++) {
+        if (y + lineHeight > pageHeight - 55) {
+          doc.addPage();
+          y = 45;
+        }
+        doc.text(lines[i], margin, y);
+        y += lineHeight;
+      }
+
+      // Footer
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(140, 150, 165);
+      doc.text("Generated securely via MedBill Shield · 100% Deterministic Compliance Audit · 0 Bytes PHI to Cloud", margin, pageHeight - 25);
+
+      return doc;
+    }
+
+    function renderDisputeLetterPdfPreview(report) {
+      const letterText = report.dispute_letter || "";
+
+      // 1. Injected hidden text for clipboard
+      document.getElementById("dispute-letter-text").textContent = letterText;
+
+      // 2. High-Fidelity Document Sheet View
+      document.getElementById("pdf-header-audit-id").textContent = report.audit_id || "MBS-DEMAND";
+      document.getElementById("pdf-header-date").textContent = (report.timestamp ? report.timestamp.split("T")[0] : new Date().toISOString().split("T")[0]);
+      document.getElementById("pdf-recipient-hospital").textContent = report.hospital_name || "Medical Facility";
+      document.getElementById("pdf-recipient-payer").textContent = report.payer_name ? `Insurance Benchmark: ${report.payer_name}` : "Standard Payer Benchmark";
+      document.getElementById("pdf-stat-billed").textContent = formatCurrency(report.total_billed);
+      document.getElementById("pdf-stat-deductions").textContent = "-" + formatCurrency(report.total_savings);
+      document.getElementById("pdf-stat-balance").textContent = formatCurrency(report.final_patient_balance);
+      document.getElementById("pdf-sheet-body").textContent = letterText;
+
+      // 3. Embedded PDF iframe View
+      try {
+        const doc = generateDisputePdf(report);
+        if (doc) {
+          const blob = doc.output("blob");
+          if (activeDisputePdfBlobUrl) URL.revokeObjectURL(activeDisputePdfBlobUrl);
+          activeDisputePdfBlobUrl = URL.createObjectURL(blob);
+          const iframe = document.getElementById("dispute-pdf-iframe");
+          if (iframe) iframe.src = activeDisputePdfBlobUrl;
+        }
+      } catch (err) {
+        console.warn("Could not generate inline PDF iframe preview:", err);
+      }
+    }
+
     function downloadDisputeLetterPdf() {
-      const text = document.getElementById("dispute-letter-text").textContent || "";
-      if (!text.trim()) return;
+      if (!currentAuditReport) return;
+      try {
+        const doc = generateDisputePdf(currentAuditReport);
+        if (doc) {
+          doc.save(`MedBill-Shield-Dispute-${currentAuditReport.audit_id || "DEMAND"}.pdf`);
+          return;
+        }
+      } catch (_e) {
+        // Fallback to iframe print
+      }
+      printDisputeLetter();
+    }
 
-      // Build a minimal print-ready HTML document
-      const htmlContent = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8">
-<title>MedBill Shield — Dispute Letter</title>
-<style>
-  @page { margin: 2.2cm 2.5cm; size: A4; }
-  body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.7; color: #000; margin: 0; padding: 0; }
-  pre { white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit; margin: 0; }
-</style>
-</head><body><pre>${text.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</pre></body></html>`;
-
-      // Open in a hidden iframe and trigger print (user saves as PDF)
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "fixed";
-      iframe.style.right = "0"; iframe.style.bottom = "0";
-      iframe.style.width = "0"; iframe.style.height = "0";
-      iframe.style.border = "none";
-      document.body.appendChild(iframe);
-      iframe.contentDocument.open();
-      iframe.contentDocument.write(htmlContent);
-      iframe.contentDocument.close();
-      iframe.onload = () => {
-        setTimeout(() => {
+    function printDisputeLetter() {
+      if (activeDisputePdfBlobUrl) {
+        const iframe = document.getElementById("dispute-pdf-iframe");
+        if (iframe && iframe.contentWindow) {
           iframe.contentWindow.focus();
           iframe.contentWindow.print();
-          setTimeout(() => document.body.removeChild(iframe), 1000);
-        }, 200);
-      };
+          return;
+        }
+      }
+      window.print();
     }
 
-    // ── Animated counter ──────────────────────────────────────────────────
+    async function copyDisputeLetter() {
+      const text = document.getElementById("dispute-letter-text").textContent || "";
+      const labelEl = document.getElementById("copy-letter-label");
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          labelEl.textContent = "Copied!";
+        } else {
+          const pre = document.getElementById("dispute-letter-text");
+          const range = document.createRange();
+          range.selectNodeContents(pre);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          labelEl.textContent = "Selected — press Ctrl+C / Cmd+C";
+        }
+        setTimeout(() => {
+          const lang = document.getElementById("language").value || "English";
+          const s = UI_STRINGS[lang] || UI_STRINGS.English;
+          labelEl.textContent = s.copy_letter_btn;
+        }, 2500);
+      } catch (_e) {
+        labelEl.textContent = "Copy Failed";
+        setTimeout(() => {
+          const lang = document.getElementById("language").value || "English";
+          const s = UI_STRINGS[lang] || UI_STRINGS.English;
+          labelEl.textContent = s.copy_letter_btn;
+        }, 2000);
+      }
+    }
+
+    // ── Animated currency counter ─────────────────────────────────────────
     function animateCurrencyValue(id, target) {
       const el = document.getElementById(id);
       if (!el) return;
@@ -1244,6 +1882,7 @@
 
     // ── Render audit report ───────────────────────────────────────────────
     function renderAuditReport(report) {
+      currentAuditReport = report;
       document.getElementById("empty-bento-showcase").classList.add("hidden");
       const wrapper = document.getElementById("audit-results-wrapper");
       wrapper.classList.remove("hidden");
@@ -1302,17 +1941,22 @@
       const container = document.getElementById("line-items-container");
       container.innerHTML = "";
 
-      const statusConfig = {
-        "NCCI_VIOLATION":    { label: "Illegal Unbundling",  cls: "bg-danger-soft text-danger-DEFAULT border border-danger-border" },
-        "DUPLICATE":         { label: "Duplicate Charge",    cls: "bg-danger-soft text-danger-DEFAULT border border-danger-border" },
-        "REVENUE_CODE_ROLLUP":{ label: "Unitemized Code",    cls: "bg-warn-soft text-warn-DEFAULT border border-warn-border" },
-        "OVERCHARGED":       { label: "Overcharged",         cls: "bg-cobalt-soft text-cobalt-DEFAULT border border-cobalt-border" },
-        "MISSING_CPT":       { label: "Missing CPT Code",    cls: "bg-warn-soft text-warn-DEFAULT border border-warn-border" },
-        "VALID":             { label: "Verified Fair",       cls: "bg-teal-soft text-teal-dark border border-teal/30" },
+      const lang = document.getElementById("language").value || "English";
+      const s = UI_STRINGS[lang] || UI_STRINGS.English;
+      const statusLabels = s.status_tags || UI_STRINGS.English.status_tags;
+
+      const statusStyles = {
+        "NCCI_VIOLATION":    "bg-danger-soft text-danger-DEFAULT border border-danger-border",
+        "DUPLICATE":         "bg-danger-soft text-danger-DEFAULT border border-danger-border",
+        "REVENUE_CODE_ROLLUP":"bg-warn-soft text-warn-DEFAULT border border-warn-border",
+        "OVERCHARGED":       "bg-cobalt-soft text-cobalt-DEFAULT border border-cobalt-border",
+        "MISSING_CPT":       "bg-warn-soft text-warn-DEFAULT border border-warn-border",
+        "VALID":             "bg-teal-soft text-teal-dark border border-teal/30",
       };
 
       lines.forEach((item) => {
-        const cfg = statusConfig[item.status] || statusConfig["VALID"];
+        const tagLabel = statusLabels[item.status] || item.status;
+        const tagCls   = statusStyles[item.status] || statusStyles["VALID"];
         const lineSaved = Number(item.layer_1_deduction || 0) + Number(item.layer_2_deduction || 0);
         const codePrefix = /^\d{4}$/.test(item.cpt_code || "") ? "REV" : "CPT";
         const plainMeaning = item.plain_language_meaning || item.description;
@@ -1325,7 +1969,7 @@
             <div class="space-y-1 min-w-0 flex-1">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="px-2 py-0.5 font-mono text-[11px] font-semibold bg-navy text-white">${escapeHtml(codePrefix)} ${escapeHtml(item.cpt_code || "MISSING")}</span>
-                <span class="px-2 py-0.5 text-[11px] font-semibold ${cfg.cls}">${escapeHtml(cfg.label)}</span>
+                <span class="px-2 py-0.5 text-[11px] font-semibold ${tagCls}">${escapeHtml(tagLabel)}</span>
                 ${item.quantity > 1 ? `<span class="text-[11px] font-mono text-ink-muted">×${item.quantity}</span>` : ""}
               </div>
               <h3 class="font-semibold text-sm text-ink">${escapeHtml(item.description)}</h3>
@@ -1343,22 +1987,22 @@
           </div>
           <details class="mt-3 pt-2.5 border-t border-surface-border">
             <summary class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-semibold text-ink hover:text-teal-dark select-none">
-              <span>Inspect statutory citation</span>
+              <span>${escapeHtml(s.inspect_citation)}</span>
               <i data-lucide="chevron-down" class="chevron-rot w-3.5 h-3.5 transition-transform"></i>
             </summary>
             <div class="mt-2 bg-white border border-surface-border p-3 text-xs space-y-1.5">
-              <div><span class="font-semibold text-ink">Plain-language meaning: </span><span class="text-ink-secondary">${escapeHtml(plainMeaning)}</span></div>
-              <div><span class="font-semibold text-ink">Legal authority: </span><span class="font-mono text-ink-secondary">${escapeHtml(item.citation)}</span></div>
-              <div><span class="font-semibold text-ink">Rule evaluation: </span><span class="text-ink-secondary">${escapeHtml(item.violation_reason)}</span></div>
-              ${item.medicare_rate > 0 ? `<div><span class="font-semibold text-ink">CMS Medicare baseline: </span><span class="font-mono text-teal-dark font-semibold">${formatCurrency(item.medicare_rate)}</span></div>` : ""}
+              <div><span class="font-semibold text-ink">${escapeHtml(s.plain_meaning_label)} </span><span class="text-ink-secondary">${escapeHtml(plainMeaning)}</span></div>
+              <div><span class="font-semibold text-ink">${escapeHtml(s.legal_auth_label)} </span><span class="font-mono text-ink-secondary">${escapeHtml(item.citation)}</span></div>
+              <div><span class="font-semibold text-ink">${escapeHtml(s.rule_eval_label)} </span><span class="text-ink-secondary">${escapeHtml(item.violation_reason)}</span></div>
+              ${item.medicare_rate > 0 ? `<div><span class="font-semibold text-ink">${escapeHtml(s.medicare_base_label)} </span><span class="font-mono text-teal-dark font-semibold">${formatCurrency(item.medicare_rate)}</span></div>` : ""}
             </div>
           </details>
         `;
         container.appendChild(card);
       });
 
-      // Dispute letter
-      document.getElementById("dispute-letter-text").textContent = report.dispute_letter || "";
+      // Render PDF Sheet & Embedded Viewer Preview
+      renderDisputeLetterPdfPreview(report);
 
       // Inspector
       const gov = report.governance || {};
@@ -1410,31 +2054,6 @@
         `;
         c.appendChild(div);
       });
-    }
-
-    // ── Copy / Download dispute letter ────────────────────────────────────
-    async function copyDisputeLetter() {
-      const text = document.getElementById("dispute-letter-text").textContent || "";
-      const labelEl = document.getElementById("copy-letter-label");
-      try {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(text);
-          labelEl.textContent = "Copied!";
-        } else {
-          // HTTP fallback: select the pre element text
-          const pre = document.getElementById("dispute-letter-text");
-          const range = document.createRange();
-          range.selectNodeContents(pre);
-          const sel = window.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
-          labelEl.textContent = "Selected — press Ctrl+C / Cmd+C";
-        }
-        setTimeout(() => { labelEl.textContent = "Copy Letter"; }, 2500);
-      } catch (_e) {
-        labelEl.textContent = "Copy Failed";
-        setTimeout(() => { labelEl.textContent = "Copy Letter"; }, 2000);
-      }
     }
 
   </script>

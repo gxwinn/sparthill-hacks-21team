@@ -255,3 +255,9 @@ class AuditReportResponse(BaseModel):
     redacted_image_base64: str
     original_image_base64: str = ""
     governance: GovernanceMetadata
+
+
+class TranslateAuditRequest(BaseModel):
+    audit_report: AuditReportResponse
+    language: str
+

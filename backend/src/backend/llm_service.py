@@ -424,13 +424,14 @@ def generate_explanations_and_dispute_letter(
             f"1. `overall_summary`: Plain-language executive summary of the audit outcome in {language}.\n"
             f"2. `line_explanations`: For every line item (matching `line_index` and `cpt_code`), provide "
             f"`plain_language_meaning` and `why_flagged` translated into {language}.\n"
-            f"3. `dispute_letter`: A formal, ready-to-send letter in English addressed to {hospital_name} "
+            f"3. `dispute_letter`: A formal, ready-to-send legal dispute letter in {language} addressed to {hospital_name} "
             f"Patient Financial Services & Billing Compliance Department. "
             f"If `is_itemized` is False, write a formal 'HIPAA Itemized Bill (Form CMS-1450 / UB-04) Request Letter' "
             f"citing 45 CFR § 164.524 and demanding a halt to billing collections until CPT/HCPCS codes are supplied. "
             f"If `is_itemized` is True, write a formal 'Medical Bill Dispute & Financial Assistance Appeal Letter' "
             f"citing the exact CPT codes, CMS NCCI edit violations, 45 CFR Part 180 Hospital Price Transparency MRF "
-            f"negotiated rates for {payer_name}, and California AB 1020 / IRS § 501(r) charity care calculations."
+            f"negotiated rates for {payer_name}, and California AB 1020 / IRS § 501(r) charity care calculations. "
+            f"Translate all headings, body text, and formal demands into {language}."
         )
 
         last_exc: Exception | None = None
@@ -563,12 +564,14 @@ def _build_deterministic_explanations(
             total_billed=total_billed,
             audited_lines=audited_lines,
             charity_care=charity_care,
+            lang=lang,
         )
     else:
         dispute_letter = _generate_formal_dispute_letter(
             hospital_name=hospital_name,
             payer_name=payer_name,
             audit_data=audit_data,
+            lang=lang,
         )
 
     return AIExplanationResponse(
@@ -758,8 +761,127 @@ def _generate_ub04_request_letter(
     total_billed: float,
     audited_lines: list[AuditedLineItem],
     charity_care: CharityCareSummary,
+    lang: str = "English",
 ) -> str:
     today_str = date.today().isoformat()
+    if lang == "Spanish":
+        lines_bullet = "\n".join(
+            f"  - {line.description}: ${line.billed_amount:,.2f} (Código CPT/HCPCS: NO PROPORCIONADO)"
+            for line in audited_lines
+        )
+        return f"""FECHA: {today_str}
+
+PARA: Servicios Financieros al Paciente y Oficial de Cumplimiento HIPAA
+    {hospital_name}
+    Ref: EXIGENCIA FORMAL DE FACTURA DETALLADA (FORMULARIO CMS-1450 / UB-04) Y SUSPENSIÓN DE COBRANZA
+    Aseguradora en Archivo: {payer_name}
+    Saldo Resumido en Disputa: ${total_billed:,.2f}
+
+Estimado Director de Cumplimiento y Facturación:
+
+Por medio de la presente, presento una disputa formal respecto al estado de cuenta resumido no desglosado por un total de ${total_billed:,.2f} emitido por {hospital_name}, ejerciendo mis derechos estatutarios federales bajo la Regla de Privacidad HIPAA (45 CFR § 164.524), la Ley No Surprises Act (Ley Pública 116-260) y las regulaciones de Transparencia de Precios Hospitalarios de CMS (45 CFR Parte 180).
+
+1. FACTURA DEFECTUOSA SIN CÓDIGOS DE PROCEDIMIENTO CPT/HCPCS
+El estado de cuenta entregado contiene únicamente cargos globales agrupados sin códigos CPT o HCPCS de 5 dígitos:
+{lines_bullet}
+
+Sin códigos CPT/HCPCS de 5 dígitos ni códigos de ingresos hospitalarios, resulta imposible verificar este documento contra las reglas federales de empaquetamiento NCCI de CMS o comprobar las tarifas negociadas según 45 CFR § 180.50.
+
+2. EXIGENCIA FORMAL DE DERECHO DE ACCESO HIPAA PARA UB-04 / CMS-1450
+Conforme a 45 CFR § 164.524(b)(2), exijo que {hospital_name} proporcione en un plazo de treinta (30) días calendario:
+  (a) Un estado de cuenta institucional desglosado línea por línea (Formulario CMS-1450 / UB-04 y/o CMS-1500);
+  (b) El código CPT/HCPCS de 5 dígitos, NDC y unidades para cada cargo; y
+  (c) Copia completa de la auditoría de codificación médica para esta atención.
+
+3. NOTIFICACIÓN DE ELEGIBILIDAD PARA ATENCIÓN CARITATIVA (CA AB 1020 Y CÓDIGO IRS § 501(r))
+Hago constar además que mi hogar consta de {charity_care.household_size} personas con un ingreso anual de ${charity_care.annual_income:,.2f}, situándonos al {charity_care.user_fpl_pct:.1f}% del Nivel Federal de Pobreza 2026. Según la Ley de Salud y Seguridad de California § 127405 (AB 1020) y el Código IRS § 501(r), tenemos derecho legal a un descuento del {charity_care.discount_pct:.0f}% en cualquier saldo pendiente una vez desglosado.
+
+EXIGENCIA DE SUSPENSIÓN INMEDIATA DE COBRANZA:
+De conformidad con el Código de Salud y Seguridad de California § 127425 e IRS § 501(r)(6), {hospital_name} debe suspender de inmediato todas las gestiones de cobro, devengo de intereses e informes a agencias de crédito mientras se tramita esta solicitud.
+
+Atentamente,
+
+[Firma del Paciente / Representante Autorizado]
+Titular de la Cuenta — Enviado mediante Correo Certificado y Portal del Paciente"""
+
+    if lang == "Vietnamese":
+        lines_bullet = "\n".join(
+            f"  - {line.description}: ${line.billed_amount:,.2f} (Mã CPT/HCPCS: KHÔNG CÓ)"
+            for line in audited_lines
+        )
+        return f"""NGÀY: {today_str}
+
+KÍNH GỬI: Phòng Tài chính Bệnh nhân & Cán bộ Tuân thủ HIPAA
+    {hospital_name}
+    V/v: YÊU CẦU CUNG CẤP BẢNG KÊ CHI TIẾT (MẪU CMS-1450 / UB-04) VÀ TẠM HOÃN THU HÓA ĐƠN
+    Đơn vị Bảo hiểm ghi nhận: {payer_name}
+    Số tiền Tóm tắt Đang khiếu nại: ${total_billed:,.2f}
+
+Kính gửi Ban Giám đốc Tuân thủ & Tài chính Bệnh nhân:
+
+Tôi viết thư này để chính thức khiếu nại bản tóm tắt viện phí chưa được bóc tách với tổng số tiền là ${total_billed:,.2f} do {hospital_name} phát hành, đồng thời thực thi quyền lợi theo Luật Bảo mật Thông tin Y tế HIPAA (45 CFR § 164.524), Đạo luật No Surprises Act và Quy định Công khai Giá Bệnh viện của CMS (45 CFR Phần 180).
+
+1. BẢNG TỔNG HỢP VIỆN PHÍ THIẾU MÃ THỦ THUẬT CPT/HCPCS
+Hóa đơn chỉ bao gồm các khoản gom gộp chung chung mà không có mã thủ thuật CPT/HCPCS 5 chữ số:
+{lines_bullet}
+
+2. YÊU CẦU CUNG CẤP BẢNG KÊ CHI TIẾT MẪU UB-04 / CMS-1450 THEO QUYỀN TRUY CẬP HIPAA
+Căn cứ 45 CFR § 164.524(b)(2), tôi yêu cầu {hospital_name} cung cấp trong vòng 30 ngày:
+  (a) Bảng kê chi tiết toàn bộ các khoản mục (Mẫu CMS-1450 / UB-04);
+  (b) Mã thủ thuật CPT/HCPCS 5 chữ số, mã thuốc NDC và số lượng cụ thể;
+  (c) Nhật ký kiểm toán bảng giá và mã dịch vụ cho đợt điều trị này.
+
+3. THÔNG BÁO VỀ ĐỦ ĐIỀU KIỆN NHẬN HỖ TRỢ VIỆN PHÍ (CA AB 1020 & IRS § 501(r))
+Hộ gia đình tôi gồm {charity_care.household_size} người với thu nhập hàng năm ${charity_care.annual_income:,.2f}, đạt {charity_care.user_fpl_pct:.1f}% chuẩn nghèo FPL 2026. Theo luật California AB 1020 và IRS § 501(r), gia đình tôi đủ điều kiện được giảm {charity_care.discount_pct:.0f}% viện phí.
+
+YÊU CẦU TẠM DỪNG HOẠT ĐỘNG THU NỢ:
+Căn cứ Bộ luật Sức khỏe California § 127425 và IRS § 501(r)(6), bệnh viện phải đình chỉ mọi hoạt động đòi nợ trong thời gian xử lý khiếu nại này.
+
+Trân trọng,
+
+[Chữ ký Bệnh nhân / Người Đại diện]
+Chủ tài khoản — Gửi qua Thư bảo đảm & Cổng thông tin Bệnh nhân"""
+
+    if lang == "Russian":
+        lines_bullet = "\n".join(
+            f"  - {line.description}: ${line.billed_amount:,.2f} (Код CPT/HCPCS: НЕ УКАЗАН)"
+            for line in audited_lines
+        )
+        return f"""ДАТА: {today_str}
+
+КОМУ: Отдел финансовых услуг пациентам и инспектору по комплаенсу HIPAA
+    {hospital_name}
+    Тема: ОФИЦИАЛЬНОЕ ТРЕБОВАНИЕ ДЕТАЛИЗИРОВАННОГО СЧЕТА (ФОРМА CMS-1450 / UB-04) И ПРИОСТАНОВКИ ВЗЫСКАНИЯ
+    Страховой план: {payer_name}
+    Оспариваемая сумма по сводному счету: ${total_billed:,.2f}
+
+Уважаемый руководитель отдела комплаенса и финансовых расчетов:
+
+Настоящим письмом заявляю официальное несогласие со сводным счетом на общую сумму ${total_billed:,.2f}, выставленным {hospital_name}, и реализую свои права в соответствии с федеральным законом HIPAA (45 CFR § 164.524), законом No Surprises Act и правилами ценовой прозрачности CMS (45 CFR Part 180).
+
+1. СВОДНЫЙ СЧЕТ НЕ СОДЕРЖИТ 5-ЗНАЧНЫХ КОДОВ CPT/HCPCS
+Предоставленный счет содержит лишь обобщенные статьи расходов без указания кодов CPT/HCPCS:
+{lines_bullet}
+
+Без указания 5-значных кодов процедур и кодов доходов невозможно проверить обоснованность начислений по правилам CMS NCCI и тарифам MRF (45 CFR § 180.50).
+
+2. ТРЕБОВАНИЕ ПРЕДОСТАВЛЕНИЯ ФОРМЫ UB-04 / CMS-1450 (HIPAA RIGHT OF ACCESS)
+На основании 45 CFR § 164.524(b)(2) требую от {hospital_name} предоставить в течение 30 календарных дней:
+  (а) Полный построчно детализированный институциональный счет (форма CMS-1450 / UB-04);
+  (б) Точные 5-значные коды CPT/HCPCS, коды NDC и количество единиц;
+  (в) Полный отчет внутреннего аудита начислений по данному обращению.
+
+3. УВЕДОМЛЕНИЕ О ПРАВЕ НА БЛАГОТВОРИТЕЛЬНУЮ ПОМОЩЬ (CA AB 1020 И IRS § 501(r))
+Состав моей семьи: {charity_care.household_size} чел., совокупный годовой доход: ${charity_care.annual_income:,.2f} ({charity_care.user_fpl_pct:.1f}% от федерального порога бедности FPL 2026). По закону CA AB 1020 и ст. 501(r) Налогового кодекса США наша семья имеет право на скидку {charity_care.discount_pct:.0f}%.
+
+ТРЕБОВАНИЕ О ПРИОСТАНОВКЕ ВЗЫСКАНИЯ:
+В силу норм California Health & Safety Code § 127425 и IRS § 501(r)(6) требую незамедлительно приостановить все действия по взысканию задолженности.
+
+С уважением,
+
+[Подпись пациента / законного представителя]
+Владелец счета — Направлено заказным письмом и через личный кабинет"""
+
     lines_bullet = "\n".join(
         f"  - {line.description}: ${line.billed_amount:,.2f} (CPT/HCPCS Code: MISSING)"
         for line in audited_lines
@@ -804,6 +926,7 @@ def _generate_formal_dispute_letter(
     hospital_name: str,
     payer_name: str,
     audit_data: dict[str, Any],
+    lang: str = "English",
 ) -> str:
     today_str = date.today().isoformat()
     audited_lines: list[AuditedLineItem] = audit_data["line_items"]
@@ -815,6 +938,238 @@ def _generate_formal_dispute_letter(
         if line.status in ("NCCI_VIOLATION", "DUPLICATE", "REVENUE_CODE_ROLLUP")
     ]
     l2_lines = [line for line in audited_lines if line.status == "OVERCHARGED"]
+
+    if lang == "Spanish":
+        l1_section = (
+            "\n".join(
+                f"  * Línea {line.line_index + 1} — CPT {line.cpt_code} ({line.description}): "
+                f"Facturado ${line.billed_amount:,.2f} -> DEDUCCIÓN EXIGIDA: -${line.layer_1_deduction:,.2f} [{line.status}]\n"
+                f"    Base Legal: {line.citation}\n"
+                f"    Motivo: {line.violation_reason}"
+                for line in l1_lines
+            )
+            if l1_lines
+            else "  * No se detectaron errores de codificación NCCI ni duplicados en Capa 1."
+        )
+        l2_section = (
+            "\n".join(
+                f"  * Línea {line.line_index + 1} — CPT {line.cpt_code} ({line.description}): "
+                f"Facturado ${line.billed_amount:,.2f} vs Tarifa Negociada ${line.allowed_amount:,.2f} "
+                f"(Base Medicare: ${line.medicare_rate:,.2f}) -> REDUCCIÓN EXIGIDA: -${line.layer_2_deduction:,.2f}\n"
+                f"    Base Legal: {line.citation}\n"
+                f"    Motivo: {line.violation_reason}"
+                for line in l2_lines
+            )
+            if l2_lines
+            else "  * Todos los procedimientos válidos se encuentran dentro de las tarifas negociadas publicadas."
+        )
+        return f"""FECHA: {today_str}
+
+PARA: Servicios Financieros al Paciente, Departamento de Integridad de Ingresos y Cumplimiento
+    {hospital_name}
+    Ref: DISPUTA FORMAL DE AUDITORÍA MÉDICA Y APELACIÓN DE ASISTENCIA FINANCIERA ESTATUTARIA
+    Aseguradora / Referencia de Plan: {payer_name}
+    Monto Bruto Original Facturado: ${audit_data['total_billed']:,.2f}
+    Saldo Legal Corregido a Pagar: ${audit_data['final_patient_balance']:,.2f} (Reducción Total Exigida: -${audit_data['total_savings']:,.2f})
+
+Estimado Director de Integridad de Ingresos y Servicios Financieros:
+
+Me dirijo a ustedes para disputar formalmente violaciones de codificación médica y sobreprecios de lista en mi estado de cuenta de {hospital_name}, y hacer valer mis derechos estatutarios de Asistencia Financiera según la ley federal y de California. Una auditoría determinística de 3 Capas identificó ${audit_data['total_savings']:,.2f} en cargos improcedentes o legalmente reducibles.
+
+================================================================================
+CAPA 1: VIOLACIONES DE DESGLOSE NCCI Y COBROS DUPLICADOS (-${audit_data['layer_1_coding_errors_removed']:,.2f})
+================================================================================
+Conforme al Manual de Políticas NCCI de CMS y las leyes contra facturación desleal, los siguientes cargos representan desglose indebido de servicios integrados o duplicación en la misma fecha de atención, por lo que deben eliminarse al 100%:
+{l1_section}
+
+================================================================================
+CAPA 2: SOBREPRECIOS SOBRE TARIFAS NEGOCIADAS MRF (45 CFR PARTE 180) (-${audit_data['layer_2_mrf_overcharge_removed']:,.2f})
+================================================================================
+Conforme a la Regla Federal de Transparencia de Precios Hospitalarios (45 CFR § 180.50) y el Código IRS § 501(r)(5) (Montos Generalmente Facturados / AGB), un hospital exento de impuestos no puede cobrar tarifas brutas superiores a las tarifas negociadas publicadas para {payer_name}:
+{l2_section}
+
+  -> Subtotal Legal Válido tras Ajustes de Capa 1 y Capa 2: ${audit_data['subtotal_after_layer_2']:,.2f}
+
+================================================================================
+CAPA 3: ASISTENCIA FINANCIERA OBLIGATORIA / ATENCIÓN CARITATIVA (-${audit_data['layer_3_charity_care_forgiveness']:,.2f})
+================================================================================
+  * Tamaño del Hogar: {charity_care.household_size} personas
+  * Ingreso Anual Bruto del Hogar: ${charity_care.annual_income:,.2f}
+  * Nivel Federal de Pobreza (FPL) 2026: ${charity_care.fpl_base_2026:,.2f}
+  * Porcentaje Verificado de FPL: {charity_care.user_fpl_pct:.1f}% FPL
+  * Nivel Estatutario: {charity_care.tier_name}
+  * Ley Aplicable: {charity_care.legal_citation}
+  * Descuento Legal Obligatorio ({charity_care.discount_pct:.0f}% de ${audit_data['subtotal_after_layer_2']:,.2f}): -${audit_data['layer_3_charity_care_forgiveness']:,.2f}
+
+================================================================================
+RESUMEN DEL AJUSTE EXIGIDO DE LA CUENTA
+================================================================================
+  1. Monto Bruto Original Facturado:              ${audit_data['total_billed']:,.2f}
+  2. Menos Errores de Codificación y NCCI:       -${audit_data['layer_1_coding_errors_removed']:,.2f}
+  3. Menos Sobreprecio MRF para {payer_name}:    -${audit_data['layer_2_mrf_overcharge_removed']:,.2f}
+  4. Subtotal Válido tras Auditoría:              ${audit_data['subtotal_after_layer_2']:,.2f}
+  5. Menos Descuento Obligatorio de Asistencia ({charity_care.discount_pct:.0f}%): -${audit_data['layer_3_charity_care_forgiveness']:,.2f}
+  ------------------------------------------------------------------------------
+  SALDO FINAL JUSTO A PAGAR:                      ${audit_data['final_patient_balance']:,.2f}
+
+Solicito la emisión de un estado de cuenta corregido que refleje el saldo debido de ${audit_data['final_patient_balance']:,.2f} en un plazo no mayor a 30 días, confirmando por escrito la suspensión inmediata de cualquier acción de cobro conforme a California Health & Safety Code § 127425 e IRS § 501(r)(6).
+
+Atentamente,
+
+[Firma del Paciente / Representante Autorizado]
+Titular de la Cuenta — Enviado mediante Correo Certificado y Portal del Paciente"""
+
+    if lang == "Vietnamese":
+        l1_section = (
+            "\n".join(
+                f"  * Dòng {line.line_index + 1} — CPT {line.cpt_code} ({line.description}): "
+                f"Tính ${line.billed_amount:,.2f} -> YÊU CẦU GIẢM: -${line.layer_1_deduction:,.2f} [{line.status}]\n"
+                f"    Căn cứ pháp lý: {line.citation}\n"
+                f"    Lý do: {line.violation_reason}"
+                for line in l1_lines
+            )
+            if l1_lines
+            else "  * Không phát hiện lỗi tách dịch vụ NCCI hay trùng lặp ở Lớp 1."
+        )
+        l2_section = (
+            "\n".join(
+                f"  * Dòng {line.line_index + 1} — CPT {line.cpt_code} ({line.description}): "
+                f"Tính ${line.billed_amount:,.2f} vs Giá Thỏa thuận ${line.allowed_amount:,.2f} "
+                f"(Mức chuẩn Medicare: ${line.medicare_rate:,.2f}) -> YÊU CẦU GIẢM: -${line.layer_2_deduction:,.2f}\n"
+                f"    Căn cứ pháp lý: {line.citation}\n"
+                f"    Lý do: {line.violation_reason}"
+                for line in l2_lines
+            )
+            if l2_lines
+            else "  * Tất cả dịch vụ hợp lệ đều nằm trong khung giá thỏa thuận công khai."
+        )
+        return f"""NGÀY: {today_str}
+
+KÍNH GỬI: Ban Giám đốc Tuân thủ & Phòng Tài chính Bệnh nhân
+    {hospital_name}
+    V/v: KHIẾU NẠI CHÍNH THỨC KIỂM TOÁN HÓA ĐƠN & ĐỀ NGHỊ MIỄN GIẢM VIỆN PHÍ THEO LUẬT ĐỊNH
+    Đơn vị Bảo hiểm / Chuẩn đối chiếu: {payer_name}
+    Tổng số tiền Viện phí Ban đầu: ${audit_data['total_billed']:,.2f}
+    Số dư Hợp pháp Cần thanh toán: ${audit_data['final_patient_balance']:,.2f} (Tổng số tiền yêu cầu giảm trừ: -${audit_data['total_savings']:,.2f})
+
+Kính gửi Ban Giám đốc Tài chính & Tuân thủ:
+
+Tôi viết thư này để chính thức khiếu nại các khoản tính phí sai quy định và vượt khung giá niêm yết trên hóa đơn của {hospital_name}, đồng thời yêu cầu áp dụng chính sách Hỗ trợ Viện phí theo quy định pháp luật. Kiểm toán độc lập 3 Lớp đã xác định ${audit_data['total_savings']:,.2f} là các khoản tính vượt mức hợp pháp.
+
+================================================================================
+LỚP 1: LỖI TÁCH DỊCH VỤ TRÁI PHÉP THEO CMS NCCI & TÍNH TRÙNG (-${audit_data['layer_1_coding_errors_removed']:,.2f})
+================================================================================
+{l1_section}
+
+================================================================================
+LỚP 2: TÍNH GIÁ VƯỢT MỨC NIÊM YẾT MRF (45 CFR PHẦN 180) (-${audit_data['layer_2_mrf_overcharge_removed']:,.2f})
+================================================================================
+{l2_section}
+
+  -> Tạm tính hợp pháp sau Lớp 1 và Lớp 2: ${audit_data['subtotal_after_layer_2']:,.2f}
+
+================================================================================
+LỚP 3: MIỄN GIẢM THEO CHÍNH SÁCH HỖ TRỢ NGHÈO (CA AB 1020 & IRS § 501(r)) (-${audit_data['layer_3_charity_care_forgiveness']:,.2f})
+================================================================================
+  * Quy mô hộ gia đình: {charity_care.household_size} người
+  * Thu nhập hàng năm: ${charity_care.annual_income:,.2f}
+  * Chuẩn nghèo Liên bang FPL 2026: ${charity_care.fpl_base_2026:,.2f}
+  * Tỷ lệ FPL thực tế: {charity_care.user_fpl_pct:.1f}% FPL
+  * Mức miễn giảm bắt buộc ({charity_care.discount_pct:.0f}%): -${audit_data['layer_3_charity_care_forgiveness']:,.2f}
+
+================================================================================
+BẢNG TỔNG HỢP ĐIỀU CHỈNH TIỀN VIỆN PHÍ
+================================================================================
+  1. Tổng viện phí ban đầu:                      ${audit_data['total_billed']:,.2f}
+  2. Trừ Lỗi mã hóa & Tách phí NCCI:            -${audit_data['layer_1_coding_errors_removed']:,.2f}
+  3. Trừ Vượt giá thỏa thuận {payer_name}:      -${audit_data['layer_2_mrf_overcharge_removed']:,.2f}
+  4. Tạm tính hợp pháp:                          ${audit_data['subtotal_after_layer_2']:,.2f}
+  5. Trừ Miễn giảm theo luật Hỗ trợ Viện phí:   -${audit_data['layer_3_charity_care_forgiveness']:,.2f}
+  ------------------------------------------------------------------------------
+  SỐ TIỀN THỰC TẾ HỢP LÝ CẦN THANH TOÁN:         ${audit_data['final_patient_balance']:,.2f}
+
+Yêu cầu bệnh viện phát hành hóa đơn mới với số tiền ${audit_data['final_patient_balance']:,.2f} trong vòng 30 ngày và tạm đình chỉ mọi hành vi thu hồi nợ theo luật California Health & Safety Code § 127425.
+
+Trân trọng,
+
+[Chữ ký Bệnh nhân / Người Đại diện]
+Chủ tài khoản — Gửi qua Thư bảo đảm & Cổng thông tin Bệnh nhân"""
+
+    if lang == "Russian":
+        l1_section = (
+            "\n".join(
+                f"  * Строка {line.line_index + 1} — CPT {line.cpt_code} ({line.description}): "
+                f"Начислено ${line.billed_amount:,.2f} -> ТРЕБУЕМЫЙ ВЫЧЕТ: -${line.layer_1_deduction:,.2f} [{line.status}]\n"
+                f"    Правовое основание: {line.citation}\n"
+                f"    Результат аудита: {line.violation_reason}"
+                for line in l1_lines
+            )
+            if l1_lines
+            else "  * Ошибок кодирования NCCI и повторных начислений не выявлено."
+        )
+        l2_section = (
+            "\n".join(
+                f"  * Строка {line.line_index + 1} — CPT {line.cpt_code} ({line.description}): "
+                f"Начислено ${line.billed_amount:,.2f} vs Тариф ${line.allowed_amount:,.2f} "
+                f"(База Medicare: ${line.medicare_rate:,.2f}) -> ТРЕБУЕМЫЙ ВЫЧЕТ: -${line.layer_2_deduction:,.2f}\n"
+                f"    Правовое основание: {line.citation}\n"
+                f"    Результат аудита: {line.violation_reason}"
+                for line in l2_lines
+            )
+            if l2_lines
+            else "  * Все подтвержденные процедуры укладываются в согласованные тарифы MRF."
+        )
+        return f"""ДАТА: {today_str}
+
+КОМУ: Отдел финансовых расчетов с пациентами, комплаенса и аудита выручки
+    {hospital_name}
+    Тема: ОФИЦИАЛЬНАЯ ПРЕТЕНЗИЯ ПО РЕЗУЛЬТАТАМ АУДИТА МЕДИЦИНСКОГО СЧЕТА И ЗАЯВЛЕНИЕ НА ЛЬГОТУ
+    Страховой план / Бенчмарк: {payer_name}
+    Исходная сумма по прейскуранту: ${audit_data['total_billed']:,.2f}
+    Законный скорректированный остаток к оплате: ${audit_data['final_patient_balance']:,.2f} (Сумма требуемого снижения: -${audit_data['total_savings']:,.2f})
+
+Уважаемый руководитель финансового и комплаенс-отдела:
+
+Настоящим заявляю официальную претензию относительно неправомерных начислений и завышения цен в моем счете от {hospital_name}, а также требую предоставить скидку по программе финансовой помощи в соответствии с федеральным законодательством и законами штата Калифорния. По итогам 3-уровневого аудита выявлено ${audit_data['total_savings']:,.2f} необоснованных начислений.
+
+================================================================================
+УРОВЕНЬ 1: НЕЗАКОННОЕ РАЗДЕЛЕНИЕ УСЛУГ (CMS NCCI) И ДУБЛИРУЮЩИЕ НАЧИСЛЕНИЯ (-${audit_data['layer_1_coding_errors_removed']:,.2f})
+================================================================================
+{l1_section}
+
+================================================================================
+УРОВЕНЬ 2: ПРЕВЫШЕНИЕ СОГЛАСОВАННЫХ ТАРИФОВ MRF (45 CFR PART 180) (-${audit_data['layer_2_mrf_overcharge_removed']:,.2f})
+================================================================================
+{l2_section}
+
+  -> Законный промежуточный итог после уровней 1 и 2: ${audit_data['subtotal_after_layer_2']:,.2f}
+
+================================================================================
+УРОВЕНЬ 3: ОБЯЗАТЕЛЬНАЯ БЛАГОТВОРИТЕЛЬНАЯ ПОМОЩЬ (CA AB 1020 И IRS § 501(r)) (-${audit_data['layer_3_charity_care_forgiveness']:,.2f})
+================================================================================
+  * Состав семьи: {charity_care.household_size} чел.
+  * Совокупный годовой доход: ${charity_care.annual_income:,.2f}
+  * Порог бедности FPL 2026: ${charity_care.fpl_base_2026:,.2f}
+  * Процент от FPL: {charity_care.user_fpl_pct:.1f}% FPL
+  * Обязательная скидка ({charity_care.discount_pct:.0f}%): -${audit_data['layer_3_charity_care_forgiveness']:,.2f}
+
+================================================================================
+СВОДКА ТРЕБУЕМЫХ КОРРЕКТИРОВОК СЧЕТА
+================================================================================
+  1. Исходная сумма по счету:                     ${audit_data['total_billed']:,.2f}
+  2. Минус Ошибки кодирования и правила NCCI:    -${audit_data['layer_1_coding_errors_removed']:,.2f}
+  3. Минус Завышение тарифа для {payer_name}:     -${audit_data['layer_2_mrf_overcharge_removed']:,.2f}
+  4. Проверенный промежуточный итог:              ${audit_data['subtotal_after_layer_2']:,.2f}
+  5. Минус Обязательная благотворительная скидка: -${audit_data['layer_3_charity_care_forgiveness']:,.2f}
+  ------------------------------------------------------------------------------
+  ИТОГОВАЯ СПРАВЕДЛИВАЯ СУММА К ОПЛАТЕ:           ${audit_data['final_patient_balance']:,.2f}
+
+Требую выставить исправленный счет на сумму ${audit_data['final_patient_balance']:,.2f} в течение 30 дней и письменно подтвердить приостановку всех процедур взыскания на основании California Health & Safety Code § 127425 и IRS § 501(r)(6).
+
+С уважением,
+
+[Подпись пациента / законного представителя]
+Владелец счета — Направлено заказным письмом и через личный кабинет"""
 
     if l1_lines:
         l1_section = "\n".join(

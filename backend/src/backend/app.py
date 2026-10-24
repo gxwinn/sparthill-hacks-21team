@@ -47,6 +47,7 @@ from backend.schemas import (
     GovernanceMetadata,
     RedactedEntityBox,
     RedactionResponse,
+    TranslateAuditRequest,
 )
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -661,6 +662,62 @@ async def audit_demo_bill(payload: DemoAuditRequest):
         privacy_meta=privacy_meta,
         ai_mode="Preset Demo Scenario (Local PII Redaction + Deterministic DuckDB Audit)",
     )
+
+
+@app.post("/api/audit/translate", response_model=AuditReportResponse)
+@app.post("/api/translate", response_model=AuditReportResponse)
+async def translate_audit_report(payload: TranslateAuditRequest):
+    """
+    Fast translation endpoint:
+    Instantly re-explains and translates the existing audit report into the requested language,
+    including plain-language summary, line item explanations, and formal dispute letter,
+    without re-running vision OCR or DuckDB.
+    """
+    report = payload.audit_report
+    target_lang = payload.language or "English"
+
+    audit_data = {
+        "is_itemized": report.is_itemized,
+        "requires_ub04_request": report.requires_ub04_request,
+        "total_billed": report.total_billed,
+        "layer_1_coding_errors_removed": report.layer_1_coding_errors_removed,
+        "layer_2_mrf_overcharge_removed": report.layer_2_mrf_overcharge_removed,
+        "subtotal_after_layer_2": report.subtotal_after_layer_2,
+        "layer_3_charity_care_forgiveness": report.layer_3_charity_care_forgiveness,
+        "total_savings": report.total_savings,
+        "final_patient_balance": report.final_patient_balance,
+        "charity_care": report.charity_care,
+        "line_items": report.line_items,
+        "sql_queries_executed": report.governance.sql_queries_executed if report.governance else [],
+    }
+
+    ai_explanation, mode = generate_explanations_and_dispute_letter(
+        audit_data=audit_data,
+        hospital_name=report.hospital_name,
+        payer_name=report.payer_name,
+        language=target_lang,
+    )
+
+    exp_by_index = {
+        exp.line_index: exp for exp in ai_explanation.line_explanations
+    }
+    updated_lines: list[AuditedLineItem] = []
+    for line in report.line_items:
+        exp = exp_by_index.get(line.line_index)
+        if exp:
+            line.plain_language_meaning = exp.plain_language_meaning
+            line.why_flagged = exp.why_flagged
+        updated_lines.append(line)
+
+    updated_report = report.model_copy(deep=True)
+    updated_report.language = target_lang
+    updated_report.plain_language_summary = ai_explanation.overall_summary
+    updated_report.dispute_letter = ai_explanation.dispute_letter
+    updated_report.line_items = updated_lines
+    if updated_report.governance:
+        updated_report.governance.ai_mode = f"{updated_report.governance.ai_mode} | {mode}"
+
+    return updated_report
 
 
 @app.get("/", response_class=HTMLResponse)
