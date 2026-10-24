@@ -2,14 +2,17 @@
 loader.py - Hospital Insurance JSON Database Loader
 
 Called at the start of main.py:
-1. Scans the database/ directory where each subdirectory is named after a specific hospital
-   (e.g. database/mercy_general_hospital/, database/st_jude_specialty_hospital/)
+1. Scans the database/ directory in backend/ where each subdirectory is named after a specific hospital
+   (e.g. backend/database/mercy_general_hospital/, backend/database/st_jude_specialty_hospital/)
 2. Inside each hospital folder, loads every JSON file named after the insurance company
    (e.g. blue_cross_blue_shield.json, aetna.json, unitedhealthcare.json)
 3. Ingests all rate records into DuckDB via query.py
 """
 
+import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import json
 from typing import List, Dict, Any
 import query
@@ -30,24 +33,27 @@ def load_hospital_database(database_dir: str = None) -> int:
         database_dir = os.path.join(base_dir, "database")
 
     if not os.path.exists(database_dir):
-        print(f"[loader.py] Warning: database folder not found at {database_dir}")
-        return 0
+        # Fallback check for root database/ if called externally
+        alt_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "database")
+        if os.path.exists(alt_dir):
+            database_dir = alt_dir
+        else:
+            print(f"[loader.py] Warning: database folder not found at {database_dir}")
+            return 0
 
     total_loaded = 0
 
-    # Iterate through hospital folders in database/
     for entry in os.listdir(database_dir):
         hospital_path = os.path.join(database_dir, entry)
         if os.path.isdir(hospital_path):
             hospital_folder_name = entry
             inferred_hospital_name = _clean_folder_name(hospital_folder_name)
 
-            # Find all JSON files named after insurance companies
             json_files = [f for f in os.listdir(hospital_path) if f.endswith(".json")]
 
             for json_file in json_files:
                 file_path = os.path.join(hospital_path, json_file)
-                insurance_slug = json_file[:-5]  # remove .json
+                insurance_slug = json_file[:-5]
                 inferred_insurance_name = _clean_folder_name(insurance_slug)
 
                 try:
@@ -58,7 +64,6 @@ def load_hospital_database(database_dir: str = None) -> int:
                     normalized_records = []
 
                     for r in records:
-                        # Ensure hospital and insurance company are populated
                         rec = dict(r)
                         if not rec.get("hospital"):
                             rec["hospital"] = inferred_hospital_name

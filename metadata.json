@@ -1,0 +1,6 @@
+{
+  "name": "BillAudit AI - Medical Bill Error & Savings Scanner",
+  "description": "Scans medical bills to detect hospital billing errors and uncover negotiated rate savings using Gemini, DuckDB, and pricing calculators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

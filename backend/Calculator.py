@@ -10,6 +10,10 @@ Calls query.py to lookup DuckDB rates:
 6. Returns finalbilljson and any confirmation questions.
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from typing import Dict, Any, Union, List, Tuple
 from schema.models import UserJson, ProcedurePriceDetail, FinalBillJson
 import query
@@ -22,19 +26,6 @@ def calculate_final_bill(
     """
     Computes finalbilljson by calling query.py for each procedure under hospital & insurance.
     Returns (finalbilljson, pending_confirmations)
-    - finalbilljson has:
-      {
-          "hospital": ...,
-          "insurance company": ...,
-          "initialTotalBill": ...,
-          "negotiatedFinalTotalBill": ...,
-          [procedureName]: {
-              "code": ...,
-              "initialPrice": ...,
-              "negotiatedPrice": ...
-          }
-      }
-    - Note: calculatedPrice and userinfo have been removed.
     """
     if isinstance(user_json_input, UserJson):
         user_json = user_json_input

@@ -12,6 +12,11 @@ Architecture & Endpoints:
 5. Procedure code is included, and calculatedPrice & userinfo have been removed from finalbilljson.
 """
 
+import sys
+import os
+# Ensure backend directory is in python search path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from typing import Dict, Any, List, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
@@ -147,10 +152,6 @@ def manual_bill(manual_user_json: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 def confirm_procedures(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     """
     Handles user confirmation for procedures matched by name.
-    payload: {
-      "userJson": {...},
-      "confirmed_procedures": {"Emergency Room Visit Level 4": true, ...}
-    }
     """
     raw_user_json = payload.get("userJson", {})
     confirmed_map = payload.get("confirmed_procedures", {})

@@ -7,7 +7,10 @@ CRITICAL: As instructed, if any field is unclear or unreadable, Gemini sets that
 Validates the output into UserJson using Pydantic.
 """
 
+import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import json
 import re
 from typing import Dict, Any, Union
@@ -18,7 +21,6 @@ try:
 except ImportError:
     from schema.models import UserJson, PatientProcedureStated
 
-# Support both google.generativeai and the new google-genai SDK if available
 try:
     import google.generativeai as genai
 except ImportError:
@@ -29,10 +31,6 @@ try:
 except ImportError:
     google_genai = None
 
-
-# ---------------------------------------------------------------------------
-# Gemini Extraction Routine with Null Field Handling
-# ---------------------------------------------------------------------------
 
 BILL_EXTRACTION_PROMPT = """
 You are an expert medical billing auditor. Analyze this medical bill image carefully.
