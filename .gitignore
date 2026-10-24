@@ -1,5 +1,7 @@
-﻿.env
+.env
 *.env
 *.duckdb
 .venv/
 __pycache__/
+cloudflared*.exe
+

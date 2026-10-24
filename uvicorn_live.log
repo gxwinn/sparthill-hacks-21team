@@ -1,0 +1,22 @@
+INFO:     Started server process [30612]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:64290 - "GET / HTTP/1.1" 200 OK
+INFO:     130.65.254.10:0 - "GET / HTTP/1.1" 200 OK
+INFO:     130.65.254.10:0 - "GET /static/logo.png HTTP/1.1" 200 OK
+INFO:     130.65.254.10:0 - "GET /api/meta HTTP/1.1" 200 OK
+INFO:     205.169.39.5:0 - "GET / HTTP/1.1" 200 OK
+INFO:     130.65.254.10:0 - "POST /api/redact HTTP/1.1" 200 OK
+INFO:     Invoking Gemini Vision OCR (model=gemini-3.5-flash-lite, image_bytes=278349)...
+2026-10-24 14:07:30,287 [INFO] google_genai.models: AFC is enabled with max remote calls: 10.
+2026-10-24 14:07:32,034 [INFO] httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+INFO:     Gemini Vision OCR succeeded (model=gemini-3.5-flash-lite, 1.78s, extracted_items=2, hospital='Manipal Hospital').
+INFO:     130.65.254.10:0 - "POST /api/analyze HTTP/1.1" 200 OK
+INFO:     34.122.147.229:0 - "GET / HTTP/1.1" 200 OK
+INFO:     34.122.147.229:0 - "GET /static/logo.png HTTP/1.1" 200 OK
+INFO:     34.122.147.229:0 - "GET /api/meta HTTP/1.1" 200 OK
+INFO:     205.169.39.16:0 - "GET / HTTP/1.1" 200 OK
+INFO:     205.169.39.16:0 - "GET /static/logo.png HTTP/1.1" 200 OK
+INFO:     205.169.39.16:0 - "GET /api/meta HTTP/1.1" 200 OK
+INFO:     205.169.39.16:0 - "GET /static/logo.png HTTP/1.1" 200 OK

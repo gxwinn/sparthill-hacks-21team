@@ -90,8 +90,16 @@
 
     .tabular-nums { font-variant-numeric: tabular-nums; }
 
+    /* ── Ensure .hidden always overrides custom button/flex display rules ── */
+    .hidden { display: none !important; }
+    @media (min-width: 640px) {
+      .sm\:inline-flex.hidden { display: inline-flex !important; }
+      .sm\:inline.hidden { display: inline !important; }
+      .sm\:block.hidden { display: block !important; }
+    }
+
     /* ── Primary button (navy) ── */
-    .btn-primary {
+    .btn-primary:not(.hidden) {
       display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
       background: #1B3A6B; color: #FFFFFF;
       border: 2px solid #1B3A6B;
@@ -105,7 +113,7 @@
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* ── CTA button (teal) ── */
-    .btn-cta {
+    .btn-cta:not(.hidden) {
       display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
       background: #1A9BA1; color: #FFFFFF;
       border: 2px solid #1A9BA1;
@@ -119,7 +127,7 @@
     .btn-cta:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* ── Ghost / outline button ── */
-    .btn-ghost {
+    .btn-ghost:not(.hidden) {
       display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
       background: transparent; color: #1B3A6B;
       border: 1.5px solid #1B3A6B;
@@ -1321,7 +1329,7 @@
       setTxt("upload-filename-label", s.upload_label);
       setTxt("upload-sub-label", s.upload_sub);
       setTxt("upload-browse-btn-text", s.browse_btn);
-      setTxt("preview-mode-label", s.original_label);
+      setTxt("preview-mode-label", currentRedactedB64 ? s.redacted_label : s.original_label);
       setTxt("btn-redact-label", s.btn_redact);
       setTxt("btn-analyze-label", s.btn_analyze);
       setTxt("btn-reset-stage1-text", s.re_redact_btn);
@@ -1446,7 +1454,12 @@
 
     async function quickStartSample(filename) {
       selectSampleBillByFilename(filename);
+      const ws = document.getElementById("document-stage-workspace");
+      if (ws) ws.scrollIntoView({ behavior: "smooth", block: "center" });
       await runStage1Redaction();
+      if (currentRedactionId || currentRedactedB64) {
+        await runStage2Analyze();
+      }
     }
 
     function showUpdateButtonIfAudited() {
@@ -1609,6 +1622,7 @@
         const btnAnalyze = document.getElementById("btn-analyze-step2");
         btnAnalyze.classList.remove("hidden");
         document.getElementById("btn-reset-stage1").classList.remove("hidden");
+        showStatusBanner("✓ Local PII Redaction Complete — Sensitive patient identifiers masked. Click 'Audit Medical Bill' below to run the 3-layer audit.", "success");
 
         if (window.gsap) {
           gsap.fromTo(step2Box,  { opacity: 0, y: 5 }, { opacity: 1, y: 0, duration: 0.25, ease: "power2.out" });
@@ -1620,7 +1634,8 @@
       } finally {
         laser.classList.add("hidden");
         btnRedact.disabled = false;
-        btnLabel.textContent = "Protect Privacy (Scrub PII On-Device)";
+        const langNow = document.getElementById("language").value || "English";
+        btnLabel.textContent = (UI_STRINGS[langNow] || UI_STRINGS.English).btn_redact;
       }
     }
 
@@ -1671,7 +1686,8 @@
         showStatusBanner(err.message || "Error analyzing medical bill.", "error");
       } finally {
         btnAnalyze.disabled = false;
-        btnLabel.textContent = "Audit Medical Bill";
+        const langNow = document.getElementById("language").value || "English";
+        btnLabel.textContent = (UI_STRINGS[langNow] || UI_STRINGS.English).btn_analyze;
       }
     }
 

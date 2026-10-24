@@ -1,3 +1,4 @@
+import asyncio
 import base64
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -29,6 +30,7 @@ from backend.db import (
 )
 from backend.demo_data import get_demo_bill, list_demo_Metadata
 from backend.llm_service import (
+    _build_deterministic_explanations,
     extract_bill_from_image,
     generate_explanations_and_dispute_letter,
 )
@@ -37,6 +39,7 @@ from backend.privacy import (
     match_local_mrf_hospital_and_payer,
     redact_bill_image,
     scrub_demo_bill,
+    warmup_ocr_worker,
 )
 from backend.schemas import (
     AnalyzeRedactedRequest,
@@ -71,6 +74,7 @@ def _evict_expired_cache_entries() -> None:
 async def lifespan(_app: FastAPI):
     init_db()
     ensure_sample_bills_seeded(SAMPLE_BILLS_DIR)
+    await asyncio.to_thread(warmup_ocr_worker)
     yield
 
 
@@ -306,12 +310,21 @@ def _assemble_audit_response(
         household_size=household_size,
     )
 
-    ai_explanation, explanation_mode = generate_explanations_and_dispute_letter(
-        audit_data=audit_data,
-        hospital_name=effective_hospital,
-        payer_name=effective_payer,
-        language=language,
-    )
+    if "Live Google GenAI SDK" in ai_mode:
+        ai_explanation = _build_deterministic_explanations(
+            audit_data=audit_data,
+            hospital_name=effective_hospital,
+            payer_name=effective_payer,
+            language=language,
+        )
+        explanation_mode = f"Deterministic Multi-Language Legal Engine ({language})"
+    else:
+        ai_explanation, explanation_mode = generate_explanations_and_dispute_letter(
+            audit_data=audit_data,
+            hospital_name=effective_hospital,
+            payer_name=effective_payer,
+            language=language,
+        )
 
     # Map per-line plain-language meanings and explanations back onto audited line items
     exp_by_index = {
@@ -463,11 +476,14 @@ async def redact_bill_stage_1(
         )
 
     try:
-        redacted_bytes, redacted_b64, privacy_meta = redact_bill_image(raw_bytes)
+        redacted_bytes, redacted_b64, privacy_meta = await asyncio.to_thread(
+            redact_bill_image, raw_bytes
+        )
     except ValueError as exc:
         logger.warning("Rejected invalid image upload in /api/redact: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     redaction_id = f"RED-{uuid.uuid4().hex[:10].upper()}"
+    orig_b64 = privacy_meta.pop("original_image_base64", "")
 
     _evict_expired_cache_entries()
     if len(_REDACTION_CACHE) >= 50:
@@ -477,6 +493,7 @@ async def redact_bill_stage_1(
     _REDACTION_CACHE[redaction_id] = {
         "redacted_bytes": redacted_bytes,
         "redacted_b64": redacted_b64,
+        "orig_b64": orig_b64,
         "privacy_meta": privacy_meta,
         "created_at": time.monotonic(),
     }
@@ -487,7 +504,7 @@ async def redact_bill_stage_1(
 
     return RedactionResponse(
         redaction_id=redaction_id,
-        original_image_base64=privacy_meta.get("original_image_base64", ""),
+        original_image_base64=orig_b64,
         redacted_image_base64=redacted_b64,
         redacted_count=int(privacy_meta.get("redacted_entity_count", len(entities))),
         detected_pii_categories=privacy_meta.get("detected_pii_categories", []),
@@ -509,7 +526,7 @@ async def redact_bill_stage_1(
 
 @app.post("/api/analyze", response_model=AuditReportResponse)
 @app.post("/api/audit/analyze", response_model=AuditReportResponse)
-async def analyze_redacted_bill_stage_2(payload: AnalyzeRedactedRequest):
+def analyze_redacted_bill_stage_2(payload: AnalyzeRedactedRequest):
     """
     Stage 2 of Two-Stage Interactive PII Redaction Flow:
     Takes the already-sanitized medical bill image confirmed by the user in Step 2,
@@ -631,7 +648,7 @@ async def audit_uploaded_bill(
 
 
 @app.post("/api/audit/demo", response_model=AuditReportResponse)
-async def audit_demo_bill(payload: DemoAuditRequest):
+def audit_demo_bill(payload: DemoAuditRequest):
     """
     Run the full 3-Layer Deterministic DuckDB Audit on one of the 3 built-in demo scenarios.
     """
@@ -666,7 +683,7 @@ async def audit_demo_bill(payload: DemoAuditRequest):
 
 @app.post("/api/audit/translate", response_model=AuditReportResponse)
 @app.post("/api/translate", response_model=AuditReportResponse)
-async def translate_audit_report(payload: TranslateAuditRequest):
+def translate_audit_report(payload: TranslateAuditRequest):
     """
     Fast translation endpoint:
     Instantly re-explains and translates the existing audit report into the requested language,
@@ -691,12 +708,13 @@ async def translate_audit_report(payload: TranslateAuditRequest):
         "sql_queries_executed": report.governance.sql_queries_executed if report.governance else [],
     }
 
-    ai_explanation, mode = generate_explanations_and_dispute_letter(
+    ai_explanation = _build_deterministic_explanations(
         audit_data=audit_data,
         hospital_name=report.hospital_name,
         payer_name=report.payer_name,
         language=target_lang,
     )
+    mode = f"Instant Multi-Language Legal Translator ({target_lang})"
 
     exp_by_index = {
         exp.line_index: exp for exp in ai_explanation.line_explanations

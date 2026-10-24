@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import threading
 from typing import Any
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from backend.demo_data import DEMO_BILLS
 from backend.schemas import ExtractedBillSchema, RawLineItem
 
@@ -251,9 +251,17 @@ $engine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages()
 while ($null -ne ($line = [Console]::In.ReadLine())) {
     $path = $line.Trim()
     if ($path -eq "EXIT") { break }
+    if ($path -eq "PING") {
+        [Console]::Out.WriteLine('{"ok":true,"words":[]}')
+        [Console]::Out.Flush()
+        continue
+    }
+    $stream = $null
+    $memStream = $null
     try {
-        $fileStream = [System.IO.File]::OpenRead($path)
-        $stream = [System.IO.WindowsRuntimeStreamExtensions]::AsRandomAccessStream($fileStream)
+        $bytes = [System.IO.File]::ReadAllBytes($path)
+        $memStream = [System.IO.MemoryStream]::new($bytes)
+        $stream = [System.IO.WindowsRuntimeStreamExtensions]::AsRandomAccessStream($memStream)
         $decoder = Await ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream)) ([Windows.Graphics.Imaging.BitmapDecoder])
         $bitmap = Await ($decoder.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
         $result = Await ($engine.RecognizeAsync($bitmap)) ([Windows.Media.Ocr.OcrResult])
@@ -274,11 +282,13 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
             }
         }
         $stream.Dispose()
-        $fileStream.Dispose()
+        $memStream.Dispose()
         $json = ConvertTo-Json -InputObject @{ ok = $true; words = $words } -Depth 4 -Compress
         [Console]::Out.WriteLine($json)
         [Console]::Out.Flush()
     } catch {
+        if ($null -ne $stream) { try { $stream.Dispose() } catch {} }
+        if ($null -ne $memStream) { try { $memStream.Dispose() } catch {} }
         $errJson = ConvertTo-Json -InputObject @{ ok = $false; error = $_.Exception.Message } -Compress
         [Console]::Out.WriteLine($errJson)
         [Console]::Out.Flush()
@@ -289,6 +299,35 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
 _ocr_lock = threading.Lock()
 _ps_worker_proc: subprocess.Popen | None = None
 _rapidocr_instance: Any = None
+
+
+def warmup_ocr_worker() -> None:
+    """Pre-warm the persistent Windows Native Offline OCR worker so first request has 0s cold start."""
+    global _ps_worker_proc
+    try:
+        with _ocr_lock:
+            if _ps_worker_proc is None or _ps_worker_proc.poll() is not None:
+                _ps_worker_proc = subprocess.Popen(
+                    [
+                        "powershell",
+                        "-NoProfile",
+                        "-NonInteractive",
+                        "-Command",
+                        _PS_OCR_WORKER_SCRIPT,
+                    ],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                )
+            if _ps_worker_proc.stdin and _ps_worker_proc.stdout:
+                _ps_worker_proc.stdin.write("PING\n")
+                _ps_worker_proc.stdin.flush()
+                _ps_worker_proc.stdout.readline()
+    except Exception:
+        _ps_worker_proc = None
 
 
 def _cleanup_ocr_worker() -> None:
@@ -773,7 +812,10 @@ def _extract_ocr_words(img: Image.Image) -> tuple[list[dict[str, Any]], str]:
     except Exception:
         _ps_worker_proc = None
     finally:
-        Path(tmp_path).unlink(missing_ok=True)
+        try:
+            Path(tmp_path).unlink(missing_ok=True)
+        except OSError:
+            pass
 
     return [], "Offline Local OCR (Fallback)"
 
@@ -1231,13 +1273,21 @@ def redact_bill_image(image_bytes: bytes) -> tuple[bytes, str, dict[str, Any]]:
         (redacted_png_bytes, base64_data_uri, privacy_meta)
     """
     try:
-        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        raw_img = Image.open(io.BytesIO(image_bytes))
+        raw_img = ImageOps.exif_transpose(raw_img)
+        img = raw_img.convert("RGB")
     except Exception as exc:
         raise ValueError(
             "Uploaded file could not be decoded as a valid image (.jpg, .png, .webp)."
         ) from exc
 
     width, height = img.size
+    max_dim = 1600
+    if max(width, height) > max_dim:
+        scale = max_dim / float(max(width, height))
+        width = max(1, int(round(width * scale)))
+        height = max(1, int(round(height * scale)))
+        img = img.resize((width, height), Image.Resampling.LANCZOS)
 
     # Step 1: Extract word bounding boxes via offline local OCR
     ocr_words, ocr_engine_used = _extract_ocr_words(img)
@@ -1280,13 +1330,16 @@ def redact_bill_image(image_bytes: bytes) -> tuple[bytes, str, dict[str, Any]]:
     buf = io.BytesIO()
     redacted_img.save(buf, format="PNG")
     redacted_bytes = buf.getvalue()
-    b64_str = base64.b64encode(redacted_bytes).decode("ascii")
-    data_uri = f"data:image/png;base64,{b64_str}"
+
+    preview_buf = io.BytesIO()
+    redacted_img.save(preview_buf, format="JPEG", quality=85, optimize=True)
+    b64_str = base64.b64encode(preview_buf.getvalue()).decode("ascii")
+    data_uri = f"data:image/jpeg;base64,{b64_str}"
 
     orig_buf = io.BytesIO()
-    img.save(orig_buf, format="PNG")
+    img.save(orig_buf, format="JPEG", quality=85, optimize=True)
     orig_b64 = base64.b64encode(orig_buf.getvalue()).decode("ascii")
-    orig_data_uri = f"data:image/png;base64,{orig_b64}"
+    orig_data_uri = f"data:image/jpeg;base64,{orig_b64}"
 
     redacted_count = len(redacted_boxes_meta)
     region_summary = (
