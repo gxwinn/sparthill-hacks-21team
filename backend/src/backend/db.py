@@ -1,12 +1,12 @@
+from pathlib import Path
+from typing import Any
 import duckdb
 from backend.config import settings
 
-SUPPORTED_HOSPITALS = [
-    "El Camino Health",
-    "Stanford Health Care",
-    "Santa Clara Valley Medical Center",
-    "Other US Hospital",
-]
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+AUTO_DETECT_OPTION = "Auto-Detect from Bill"
 
 LOCAL_MRF_HOSPITALS = [
     "El Camino Health",
@@ -14,11 +14,32 @@ LOCAL_MRF_HOSPITALS = [
     "Santa Clara Valley Medical Center",
 ]
 
-SUPPORTED_PAYERS = [
+SUPPORTED_HOSPITALS = [
+    AUTO_DETECT_OPTION,
+    "El Camino Health",
+    "Stanford Health Care",
+    "Santa Clara Valley Medical Center",
+    "Other US Hospital",
+]
+
+LOCAL_MRF_PAYERS = [
     "Anthem Blue Cross",
     "Aetna",
     "Cigna",
     "UnitedHealthcare",
+]
+
+OTHER_INSURANCE_OPTION = "Other Insurance / Out-of-Network (Median MRF / Federal Cap)"
+UNINSURED_SELF_PAY_OPTION = "Uninsured / Self-Pay (Federal Medicare Benchmark + Charity Care)"
+
+SUPPORTED_PAYERS = [
+    AUTO_DETECT_OPTION,
+    "Anthem Blue Cross",
+    "Aetna",
+    "Cigna",
+    "UnitedHealthcare",
+    OTHER_INSURANCE_OPTION,
+    UNINSURED_SELF_PAY_OPTION,
 ]
 
 SUPPORTED_LANGUAGES = [
@@ -28,195 +49,28 @@ SUPPORTED_LANGUAGES = [
     "Vietnamese",
 ]
 
-# Base CPT catalog with Gross, Payer-specific MRF rates, and Medicare rates
-CPT_CATALOG = [
-    {
-        "cpt_code": "99285",
-        "description": "Emergency Dept Visit Level 5",
-        "gross_charge": 3800.0,
-        "payers": {
-            "Anthem Blue Cross": 1150.0,
-            "Aetna": 1080.0,
-            "Cigna": 1220.0,
-            "UnitedHealthcare": 1180.0,
-        },
-        "medicare_rate": 420.0,
-    },
-    {
-        "cpt_code": "99283",
-        "description": "Emergency Dept Visit Level 3",
-        "gross_charge": 1650.0,
-        "payers": {
-            "Anthem Blue Cross": 520.0,
-            "Aetna": 490.0,
-            "Cigna": 540.0,
-            "UnitedHealthcare": 530.0,
-        },
-        "medicare_rate": 195.0,
-    },
-    {
-        "cpt_code": "70551",
-        "description": "MRI Brain w/o Contrast",
-        "gross_charge": 4500.0,
-        "payers": {
-            "Anthem Blue Cross": 1200.0,
-            "Aetna": 1100.0,
-            "Cigna": 1300.0,
-            "UnitedHealthcare": 1250.0,
-        },
-        "medicare_rate": 290.0,
-    },
-    {
-        "cpt_code": "71045",
-        "description": "Chest X-Ray Single View",
-        "gross_charge": 680.0,
-        "payers": {
-            "Anthem Blue Cross": 140.0,
-            "Aetna": 125.0,
-            "Cigna": 150.0,
-            "UnitedHealthcare": 145.0,
-        },
-        "medicare_rate": 45.0,
-    },
-    {
-        "cpt_code": "12001",
-        "description": "Simple Repair of Superficial Wound",
-        "gross_charge": 1100.0,
-        "payers": {
-            "Anthem Blue Cross": 310.0,
-            "Aetna": 290.0,
-            "Cigna": 330.0,
-            "UnitedHealthcare": 320.0,
-        },
-        "medicare_rate": 115.0,
-    },
-    {
-        "cpt_code": "99070",
-        "description": "Surgical Tray / Special Supplies",
-        "gross_charge": 450.0,
-        "payers": {
-            "Anthem Blue Cross": 120.0,
-            "Aetna": 110.0,
-            "Cigna": 130.0,
-            "UnitedHealthcare": 125.0,
-        },
-        "medicare_rate": 0.0,
-    },
-    {
-        "cpt_code": "36415",
-        "description": "Routine Venipuncture / Blood Draw",
-        "gross_charge": 185.0,
-        "payers": {
-            "Anthem Blue Cross": 25.0,
-            "Aetna": 22.0,
-            "Cigna": 28.0,
-            "UnitedHealthcare": 26.0,
-        },
-        "medicare_rate": 12.0,
-    },
-    {
-        "cpt_code": "80053",
-        "description": "Comprehensive Metabolic Panel",
-        "gross_charge": 420.0,
-        "payers": {
-            "Anthem Blue Cross": 48.0,
-            "Aetna": 42.0,
-            "Cigna": 55.0,
-            "UnitedHealthcare": 50.0,
-        },
-        "medicare_rate": 18.0,
-    },
-    {
-        "cpt_code": "80048",
-        "description": "Basic Metabolic Panel",
-        "gross_charge": 340.0,
-        "payers": {
-            "Anthem Blue Cross": 38.0,
-            "Aetna": 34.0,
-            "Cigna": 42.0,
-            "UnitedHealthcare": 40.0,
-        },
-        "medicare_rate": 14.0,
-    },
-    {
-        "cpt_code": "85025",
-        "description": "Complete Blood Count (CBC) w/ Auto Diff",
-        "gross_charge": 290.0,
-        "payers": {
-            "Anthem Blue Cross": 32.0,
-            "Aetna": 29.0,
-            "Cigna": 35.0,
-            "UnitedHealthcare": 33.0,
-        },
-        "medicare_rate": 11.0,
-    },
-    {
-        "cpt_code": "85027",
-        "description": "Complete Blood Count (CBC) Automated",
-        "gross_charge": 240.0,
-        "payers": {
-            "Anthem Blue Cross": 26.0,
-            "Aetna": 24.0,
-            "Cigna": 28.0,
-            "UnitedHealthcare": 27.0,
-        },
-        "medicare_rate": 9.0,
-    },
-]
 
-NCCI_SEED_EDITS = [
-    (
-        "12001",
-        "99070",
-        "Surgical tray and standard supplies (99070) are integral to wound repair (12001) and cannot be billed separately.",
-        "CMS NCCI Policy Manual, Ch. 1, Sec. C — Supplies & Materials",
-    ),
-    (
-        "99285",
-        "36415",
-        "Routine venipuncture (36415) bundled into Emergency Department facility/evaluation service when performed during same encounter.",
-        "CMS NCCI PTP Edit 99285/36415 (Modifier Indicator 0)",
-    ),
-    (
-        "85025",
-        "85027",
-        "Mutually exclusive laboratory codes: Automated CBC with differential (85025) already includes standard automated CBC (85027).",
-        "CMS NCCI Pathology/Laboratory PTP Edit 85025/85027",
-    ),
-    (
-        "80053",
-        "80048",
-        "Overlapping organ/disease panel: Comprehensive Metabolic Panel (80053) encompasses Basic Metabolic Panel (80048).",
-        "CMS NCCI Laboratory Panel Edit 80053/80048",
-    ),
-]
+def _ensure_csv_datasets_exist() -> None:
+    """Ensure the structured CSV datasets in `data/` exist before DuckDB ingestion."""
+    required_files = [
+        DATA_DIR / "cms_medicare_pfs.csv",
+        DATA_DIR / "hospital_mrf_rates.csv",
+        DATA_DIR / "cms_ncci_edits.csv",
+        DATA_DIR / "ub04_revenue_code_rules.csv",
+        DATA_DIR / "charity_care_fpl_tiers.csv",
+        DATA_DIR / "data_governance_sources.csv",
+    ]
+    if all(p.exists() for p in required_files):
+        return
 
-CHARITY_CARE_SEED_RULES = [
-    (
-        "Tier 1 — Full Charity Care Forgiveness (<= 200% FPL)",
-        0.0,
-        200.0,
-        100.0,
-        "California Health & Safety Code § 127405 (AB 1020) & IRS § 501(r)(4)",
-        "Nonprofit hospitals must provide 100% full forgiveness of out-of-pocket balances for patients with household income at or below 200% of the Federal Poverty Level.",
-    ),
-    (
-        "Tier 2 — Extended Financial Assistance Discount (200% - 400% FPL)",
-        200.0001,
-        400.0,
-        65.0,
-        "California Health & Safety Code § 127405 (AB 1020) & IRS § 501(r)(5) AGB Limitation",
-        "Nonprofit hospitals must cap and discount out-of-pocket balances (even after insurance deductibles/copays) by 65% for patients between 200% and 400% of the Federal Poverty Level.",
-    ),
-    (
-        "Tier 3 — Standard Financial Policy (> 400% FPL)",
-        400.0001,
-        999999.0,
-        0.0,
-        "IRS § 501(r) Standard Financial Assistance Threshold",
-        "Household income exceeds the 400% FPL statutory threshold for mandatory AB 1020 discount; Layer 1 & Layer 2 coding and MRF rate protections still apply in full.",
-    ),
-]
+    import sys
+
+    scripts_parent = str(PROJECT_ROOT)
+    if scripts_parent not in sys.path:
+        sys.path.insert(0, scripts_parent)
+    from scripts.fetch_and_build_data import build_all_reference_csvs
+
+    build_all_reference_csvs(DATA_DIR)
 
 
 def get_connection() -> duckdb.DuckDBPyConnection:
@@ -225,130 +79,147 @@ def get_connection() -> duckdb.DuckDBPyConnection:
 
 
 def init_db() -> None:
-    """Initialize medbill.duckdb and populate hospital_prices, medicare_benchmark, ncci_edits, and charity_care_rules."""
+    """
+    Initialize medbill.duckdb strictly by loading structured reference CSV datasets
+    from `<project_root>/data/*.csv` using DuckDB `read_csv_auto`.
+    """
+    _ensure_csv_datasets_exist()
+
+    mrf_csv = (DATA_DIR / "hospital_mrf_rates.csv").resolve().as_posix()
+    pfs_csv = (DATA_DIR / "cms_medicare_pfs.csv").resolve().as_posix()
+    ncci_csv = (DATA_DIR / "cms_ncci_edits.csv").resolve().as_posix()
+    ub04_csv = (DATA_DIR / "ub04_revenue_code_rules.csv").resolve().as_posix()
+    cc_csv = (DATA_DIR / "charity_care_fpl_tiers.csv").resolve().as_posix()
+    gov_csv = (DATA_DIR / "data_governance_sources.csv").resolve().as_posix()
+
     with get_connection() as conn:
+        # 1. Hospital MRF Negotiated Payer Rates (45 CFR § 180.50)
         conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS hospital_prices (
-                hospital_name VARCHAR,
-                payer_name VARCHAR,
-                cpt_code VARCHAR,
-                description VARCHAR,
-                gross_charge DOUBLE,
-                allowed_payer_rate DOUBLE,
-                medicare_rate DOUBLE,
-                PRIMARY KEY (hospital_name, payer_name, cpt_code)
-            );
+            f"""
+            CREATE OR REPLACE TABLE hospital_prices AS
+            SELECT
+                CAST(hospital_name AS VARCHAR) AS hospital_name,
+                CAST(payer_name AS VARCHAR) AS payer_name,
+                CAST(cpt_code AS VARCHAR) AS cpt_code,
+                CAST(description AS VARCHAR) AS description,
+                CAST(gross_charge AS DOUBLE) AS gross_charge,
+                CAST(allowed_payer_rate AS DOUBLE) AS allowed_payer_rate,
+                CAST(medicare_rate AS DOUBLE) AS medicare_rate,
+                CAST(mrf_source_citation AS VARCHAR) AS mrf_source_citation
+            FROM read_csv_auto('{mrf_csv}', header=true, all_varchar=true, encoding='utf-8');
             """
         )
 
+        # 2. CMS Medicare Physician Fee Schedule (PFS) & Clinical Lab Fee Schedule (CLFS)
         conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS medicare_benchmark (
-                cpt_code VARCHAR PRIMARY KEY,
-                description VARCHAR,
-                gross_charge DOUBLE,
-                medicare_rate DOUBLE,
-                fair_allowed_amount DOUBLE
-            );
+            f"""
+            CREATE OR REPLACE TABLE medicare_benchmark AS
+            SELECT
+                CAST(cpt_code AS VARCHAR) AS cpt_code,
+                CAST(code_type AS VARCHAR) AS code_type,
+                CAST(category AS VARCHAR) AS category,
+                CAST(description AS VARCHAR) AS description,
+                CAST(gross_charge AS DOUBLE) AS gross_charge,
+                CAST(medicare_rate AS DOUBLE) AS medicare_rate,
+                CAST(fair_allowed_amount AS DOUBLE) AS fair_allowed_amount,
+                CAST(cms_status AS VARCHAR) AS cms_status,
+                CAST(source_authority AS VARCHAR) AS source_authority
+            FROM read_csv_auto('{pfs_csv}', header=true, all_varchar=true, encoding='utf-8');
             """
         )
 
+        # 3. CMS National Correct Coding Initiative (NCCI) PTP Bundling Edits
         conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS ncci_edits (
-                column_1_cpt VARCHAR,
-                column_2_cpt VARCHAR,
-                violation_reason VARCHAR,
-                cms_citation VARCHAR,
-                PRIMARY KEY (column_1_cpt, column_2_cpt)
-            );
+            f"""
+            CREATE OR REPLACE TABLE ncci_edits AS
+            SELECT
+                CAST(column_1_cpt AS VARCHAR) AS column_1_cpt,
+                CAST(column_2_cpt AS VARCHAR) AS column_2_cpt,
+                CAST(modifier_indicator AS VARCHAR) AS modifier_indicator,
+                CAST(effective_date AS VARCHAR) AS effective_date,
+                CAST(violation_reason AS VARCHAR) AS violation_reason,
+                CAST(cms_citation AS VARCHAR) AS cms_citation
+            FROM read_csv_auto('{ncci_csv}', header=true, all_varchar=true, encoding='utf-8');
             """
         )
 
+        # 4. CMS Form UB-04 (CMS-1450) 4-Digit Revenue Code Itemization Rules
         conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS charity_care_rules (
-                tier_name VARCHAR PRIMARY KEY,
-                min_fpl_pct DOUBLE,
-                max_fpl_pct DOUBLE,
-                discount_pct DOUBLE,
-                legal_citation VARCHAR,
-                policy_summary VARCHAR
-            );
+            f"""
+            CREATE OR REPLACE TABLE ub04_revenue_rules AS
+            SELECT
+                CAST(rev_code AS VARCHAR) AS rev_code,
+                CAST(rev_description AS VARCHAR) AS rev_description,
+                CAST(LOWER(requires_hcpcs_ndc) = 'true' AS BOOLEAN) AS requires_hcpcs_ndc,
+                CAST(medicare_base_allowance AS DOUBLE) AS medicare_base_allowance,
+                CAST(violation_title AS VARCHAR) AS violation_title,
+                CAST(cms_citation AS VARCHAR) AS cms_citation,
+                CAST(violation_reason AS VARCHAR) AS violation_reason
+            FROM read_csv_auto('{ub04_csv}', header=true, all_varchar=true, encoding='utf-8');
             """
         )
 
-        # Populate hospital_prices
-        price_count = conn.execute("SELECT COUNT(*) FROM hospital_prices").fetchone()[0]
-        if price_count == 0:
-            hospital_rows = []
-            for hospital in LOCAL_MRF_HOSPITALS:
-                for item in CPT_CATALOG:
-                    for payer_name, allowed_rate in item["payers"].items():
-                        hospital_rows.append(
-                            (
-                                hospital,
-                                payer_name,
-                                item["cpt_code"],
-                                item["description"],
-                                item["gross_charge"],
-                                allowed_rate,
-                                item["medicare_rate"],
-                            )
-                        )
-            conn.executemany(
-                """
-                INSERT INTO hospital_prices (
-                    hospital_name, payer_name, cpt_code, description,
-                    gross_charge, allowed_payer_rate, medicare_rate
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                hospital_rows,
-            )
+        # 5. California AB 1020 & IRS § 501(r) Charity Care FPL Tiers
+        conn.execute(
+            f"""
+            CREATE OR REPLACE TABLE charity_care_rules AS
+            SELECT
+                CAST(tier_name AS VARCHAR) AS tier_name,
+                CAST(min_fpl_pct AS DOUBLE) AS min_fpl_pct,
+                CAST(max_fpl_pct AS DOUBLE) AS max_fpl_pct,
+                CAST(discount_pct AS DOUBLE) AS discount_pct,
+                CAST(legal_citation AS VARCHAR) AS legal_citation,
+                CAST(policy_summary AS VARCHAR) AS policy_summary
+            FROM read_csv_auto('{cc_csv}', header=true, all_varchar=true, encoding='utf-8');
+            """
+        )
 
-        # Populate medicare_benchmark
-        bench_count = conn.execute("SELECT COUNT(*) FROM medicare_benchmark").fetchone()[0]
-        if bench_count == 0:
-            bench_rows = [
-                (
-                    item["cpt_code"],
-                    item["description"],
-                    item["gross_charge"],
-                    item["medicare_rate"],
-                    round(item["medicare_rate"] * 1.8, 2),
-                )
-                for item in CPT_CATALOG
-            ]
-            conn.executemany(
-                """
-                INSERT INTO medicare_benchmark (
-                    cpt_code, description, gross_charge, medicare_rate, fair_allowed_amount
-                ) VALUES (?, ?, ?, ?, ?)
-                """,
-                bench_rows,
-            )
+        # 6. Data Provenance & Governance Registry
+        conn.execute(
+            f"""
+            CREATE OR REPLACE TABLE data_governance_sources AS
+            SELECT
+                CAST(dataset_id AS VARCHAR) AS dataset_id,
+                CAST(dataset_name AS VARCHAR) AS dataset_name,
+                CAST(csv_file AS VARCHAR) AS csv_file,
+                CAST(regulatory_authority AS VARCHAR) AS regulatory_authority,
+                CAST(statutory_citation AS VARCHAR) AS statutory_citation,
+                CAST(source_url AS VARCHAR) AS source_url,
+                CAST(effective_date AS VARCHAR) AS effective_date,
+                CAST(verification_notes AS VARCHAR) AS verification_notes
+            FROM read_csv_auto('{gov_csv}', header=true, all_varchar=true, encoding='utf-8');
+            """
+        )
 
-        # Populate ncci_edits
-        ncci_count = conn.execute("SELECT COUNT(*) FROM ncci_edits").fetchone()[0]
-        if ncci_count == 0:
-            conn.executemany(
-                """
-                INSERT INTO ncci_edits (
-                    column_1_cpt, column_2_cpt, violation_reason, cms_citation
-                ) VALUES (?, ?, ?, ?)
-                """,
-                NCCI_SEED_EDITS,
-            )
 
-        # Populate charity_care_rules
-        cc_count = conn.execute("SELECT COUNT(*) FROM charity_care_rules").fetchone()[0]
-        if cc_count == 0:
-            conn.executemany(
-                """
-                INSERT INTO charity_care_rules (
-                    tier_name, min_fpl_pct, max_fpl_pct, discount_pct, legal_citation, policy_summary
-                ) VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                CHARITY_CARE_SEED_RULES,
-            )
+def get_data_governance_sources() -> list[dict[str, Any]]:
+    """Return all regulatory dataset provenance rows from DuckDB `data_governance_sources`."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                dataset_id,
+                dataset_name,
+                csv_file,
+                regulatory_authority,
+                statutory_citation,
+                source_url,
+                effective_date,
+                verification_notes
+            FROM data_governance_sources
+            ORDER BY dataset_id
+            """
+        ).fetchall()
+    return [
+        {
+            "dataset_id": r[0],
+            "dataset_name": r[1],
+            "csv_file": r[2],
+            "regulatory_authority": r[3],
+            "statutory_citation": r[4],
+            "source_url": r[5],
+            "effective_date": r[6],
+            "verification_notes": r[7],
+        }
+        for r in rows
+    ]

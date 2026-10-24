@@ -1,0 +1,23 @@
+column_1_cpt,column_2_cpt,modifier_indicator,effective_date,violation_reason,cms_citation
+12001,99070,0,2026-01-01,Surgical tray and standard supplies (99070) are integral to wound repair (12001) and cannot be billed separately.,"CMS NCCI Policy Manual, Ch. 1, Sec. C — Supplies & Materials (Status B)"
+12002,99070,0,2026-01-01,Surgical tray and standard supplies (99070) are integral to superficial wound repair (12002) and cannot be unbundled.,"CMS NCCI Policy Manual, Ch. 1, Sec. C — Supplies & Materials (Status B)"
+10060,99070,0,2026-01-01,Surgical tray and standard supplies (99070) are bundled into incision and drainage procedure (10060).,"CMS NCCI Policy Manual, Ch. 1, Sec. C — Supplies & Materials (Status B)"
+99285,36415,0,2026-01-01,Routine venipuncture (36415) bundled into Emergency Department facility/evaluation service (99285) when performed during same encounter.,CMS NCCI PTP Edit 99285/36415 (Modifier Indicator 0)
+99284,36415,0,2026-01-01,Routine venipuncture (36415) bundled into Emergency Department Level 4 service (99284) during same encounter.,CMS NCCI PTP Edit 99284/36415 (Modifier Indicator 0)
+99283,36415,0,2026-01-01,Routine venipuncture (36415) bundled into Emergency Department Level 3 service (99283) during same encounter.,CMS NCCI PTP Edit 99283/36415 (Modifier Indicator 0)
+99285,0260,0,2026-01-01,Unitemized IV Therapy roll-up (Rev Code 0260) cannot be billed separately alongside Level 5 ED Visit (99285) without specific HCPCS infusion codes.,CMS OPPS Packaging Rule & NCCI Ch. 11 — Emergency Dept Facility Bundling
+99284,0260,0,2026-01-01,Unitemized IV Therapy roll-up (Rev Code 0260) is packaged into Level 4 ED Visit (99284) absent distinct HCPCS infusion codes.,CMS OPPS Packaging Rule & NCCI Ch. 11 — Emergency Dept Facility Bundling
+99283,0260,0,2026-01-01,Unitemized IV Therapy roll-up (Rev Code 0260) is packaged into Level 3 ED Visit (99283) absent distinct HCPCS infusion codes.,CMS OPPS Packaging Rule & NCCI Ch. 11 — Emergency Dept Facility Bundling
+99285,0270,0,2026-01-01,Routine medical/surgical supplies (Rev Code 0270) are packaged into the Emergency Department visit facility fee (99285).,CMS OPPS 42 CFR § 419.2(b) — Packaged Routine Supplies
+99283,0270,0,2026-01-01,Routine medical/surgical supplies (Rev Code 0270) are packaged into the Emergency Department visit facility fee (99283).,CMS OPPS 42 CFR § 419.2(b) — Packaged Routine Supplies
+85025,85027,0,2026-01-01,Mutually exclusive laboratory codes: Automated CBC with differential (85025) already includes standard automated CBC (85027).,CMS NCCI Pathology/Laboratory PTP Edit 85025/85027
+80053,80048,0,2026-01-01,Overlapping organ/disease panel: Comprehensive Metabolic Panel (80053) encompasses all 8 tests of Basic Metabolic Panel (80048).,"CMS NCCI Laboratory Panel Edit 80053/80048 (Ch. 10, Sec. C)"
+80053,80076,0,2026-01-01,"Overlapping organ/disease panel: Comprehensive Metabolic Panel (80053) includes albumin, total bilirubin, alkaline phosphatase, AST, and ALT from Hepatic Function Panel (80076).","CMS NCCI Laboratory Panel Edit 80053/80076 (Ch. 10, Sec. C)"
+80053,82947,0,2026-01-01,Component laboratory code: Quantitative blood glucose (82947) is already a constituent test of Comprehensive Metabolic Panel (80053).,CMS NCCI Laboratory Panel Edit 80053/82947
+80048,82947,0,2026-01-01,Component laboratory code: Quantitative blood glucose (82947) is already a constituent test of Basic Metabolic Panel (80048).,CMS NCCI Laboratory Panel Edit 80048/82947
+93000,93005,0,2026-01-01,Duplicate component billing: Global 12-Lead ECG (93000) already includes the technical ECG tracing (93005).,CMS NCCI Cardiovascular PTP Edit 93000/93005
+93000,93010,0,2026-01-01,Duplicate component billing: Global 12-Lead ECG (93000) already includes physician ECG interpretation and report (93010).,CMS NCCI Cardiovascular PTP Edit 93000/93010
+93306,93307,0,2026-01-01,Mutually exclusive echocardiography codes: Complete TTE with Doppler & Color Flow (93306) includes 2D TTE without Doppler (93307).,CMS NCCI Cardiovascular PTP Edit 93306/93307
+71046,71045,0,2026-01-01,Mutually exclusive radiology codes: 2-View Chest X-Ray (71046) encompasses Single-View Chest X-Ray (71045).,CMS NCCI Radiology PTP Edit 71046/71045
+96365,96360,0,2026-01-01,Concurrent IV hydration (96360) is bundled into initial therapeutic IV infusion (96365) when administered through the same IV access.,CMS NCCI Infusion PTP Edit 96365/96360
+99291,94760,0,2026-01-01,Pulse oximetry (94760) is statutorily bundled into Critical Care evaluation and management (99291).,CMS CPT Critical Care Guidelines & NCCI PTP Edit 99291/94760

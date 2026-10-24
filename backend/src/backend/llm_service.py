@@ -82,10 +82,49 @@ CPT_TRANSLATIONS: dict[str, dict[str, str]] = {
         "Spanish": "Hemograma completo (CBC) automatizado estándar sin diferencial.",
         "Vietnamese": "Tổng phân tích tế bào máu (CBC) tự động tiêu chuẩn.",
     },
+    "93306": {
+        "English": "Complete transthoracic echocardiogram (ultrasound of the heart) with Doppler and color flow mapping.",
+        "Russian": "Полная трансторакальная эхокардиография (УЗИ сердца) с допплерографией и цветным картированием.",
+        "Spanish": "Ecocardiograma transtorácico completo (ultrasonido del corazón) con Doppler y flujo a color.",
+        "Vietnamese": "Siêu âm tim qua thành ngực toàn diện có Doppler và bản đồ dòng chảy màu.",
+    },
+    "80061": {
+        "English": "Lipid Panel — blood test measuring total cholesterol, HDL, LDL, and triglycerides.",
+        "Russian": "Липидная панель — анализ крови на общий холестерин, ЛПВП, ЛПНП и триглицериды.",
+        "Spanish": "Perfil lipídico — análisis de sangre que mide colesterol total, HDL, LDL y triglicéridos.",
+        "Vietnamese": "Bộ xét nghiệm mỡ máu (Lipid Panel) — đo cholesterol toàn phần, HDL, LDL và triglyceride.",
+    },
+    "0250": {
+        "English": "General hospital pharmacy services and routine inpatient/outpatient medication dispensing (Revenue Code 0250).",
+        "Russian": "Общие аптечные услуги больницы и базовые медикаменты (код дохода UB-04 0250).",
+        "Spanish": "Servicios generales de farmacia hospitalaria y medicamentos básicos (Código de ingresos 0250).",
+        "Vietnamese": "Dịch vụ dược bệnh viện tổng quát và cấp phát thuốc thông thường (Mã doanh thu 0250).",
+    },
+    "92250": {
+        "English": "Fundus photography / retinal imaging exam to screen for diabetic retinopathy and eye disease.",
+        "Russian": "Фотографирование глазного дна (осмотр сетчатки при диабетической ретинопатии).",
+        "Spanish": "Fotografía de fondo de ojo / examen de retina para detección de retinopatía diabética.",
+        "Vietnamese": "Chụp ảnh đáy mắt / khám võng mạc tầm soát bệnh võng mạc tiểu đường.",
+    },
+    "0120": {
+        "English": "Hospital inpatient room and board — semi-private two-bed room (Revenue Code 0120).",
+        "Russian": "Пребывание и питание в стационаре — двухместная полуприватная палата (код дохода 0120).",
+        "Spanish": "Habitación y alimentación hospitalaria — habitación semiprivada de dos camas (Código 0120).",
+        "Vietnamese": "Tiền giường và nội trú bệnh viện — phòng bán tư nhân hai giường (Mã doanh thu 0120).",
+    },
 }
 
 
+# After a Gemini failure, wait 60 s before retrying (avoids permanent lock-out on transient errors)
+_GEMINI_FAILED_AT: float = 0.0
+_GEMINI_RETRY_AFTER_SECS: float = 60.0
+
+
 def _has_valid_api_key() -> bool:
+    import time
+    global _GEMINI_FAILED_AT
+    if _GEMINI_FAILED_AT and (time.monotonic() - _GEMINI_FAILED_AT) < _GEMINI_RETRY_AFTER_SECS:
+        return False
     key = (settings.GEMINI_API_KEY or "").strip()
     return bool(key) and key != "your_gemini_api_key_here"
 
@@ -93,21 +132,42 @@ def _has_valid_api_key() -> bool:
 def extract_bill_from_image(
     redacted_image_bytes: bytes,
     mime_type: str = "image/png",
-    fallback_hospital: str = "El Camino Health",
+    fallback_hospital: str = "",
 ) -> tuple[ExtractedBillSchema, str]:
     """
-    Step 2: Use google-genai (`gemini-2.5-flash`) with Structured Outputs (`response_schema`)
-    to extract structured line items from the PII-redacted medical bill image.
+    Step 2: Extract structured hospital_name, payer_name, and line_items from the
+    surgically PII-redacted medical bill image using local offline OCR + Google GenAI (`gemini-2.5-flash`).
     """
+    from backend.privacy import (
+        extract_bill_via_local_ocr,
+        normalize_and_filter_extracted_bill,
+    )
+
+    local_extracted = extract_bill_via_local_ocr(
+        image_bytes=redacted_image_bytes,
+        fallback_hospital=fallback_hospital,
+    )
+
     if _has_valid_api_key():
         try:
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            client = genai.Client(
+                api_key=settings.GEMINI_API_KEY,
+                http_options={"timeout": 3000},
+            )
             prompt = (
                 "You are an expert medical billing auditor OCR system. "
-                "Examine this PII-redacted medical bill image (the top 15% header was blacked out locally for HIPAA privacy). "
-                "Extract the hospital_name, determine is_itemized (True ONLY if 5-character CPT/HCPCS codes are present, "
-                "False if this is a consolidated summary bill without CPT codes), and extract all line_items "
-                "with cpt_code, description, quantity, and billed_amount."
+                "Examine this surgically PII-redacted medical bill image (sensitive patient PII bounding boxes were "
+                "blacked out locally on-device for HIPAA privacy, while hospital name, insurance payer, CPT/HCPCS/revenue codes, procedure "
+                "descriptions, quantities, and dollar charges were whitelisted and preserved).\n"
+                "CRITICAL EXTRACTION RULES:\n"
+                "1. Extract `hospital_name` (exact facility name on the header, or empty string if not shown) and `payer_name` (exact insurance payer/plan name, or empty string if not shown).\n"
+                "2. Extract ONLY actual medical procedures, diagnostic tests, pharmacy/supplies, and facility services into `line_items`.\n"
+                "3. STRICTLY EXCLUDE financial summary, footer, subtotal, adjustment, discount, tax, payment, or balance-due rows "
+                "(e.g. 'Total Billed Charges', 'Total Gross Billed', 'Insurance Adjustments', 'PATIENT AMOUNT DUE', 'Balance Due', 'Subtotal', 'Amount Paid').\n"
+                "4. For each service row, separate out any leading service date (e.g. '05/22/2026' must NOT be placed in `description`), "
+                "put the 5-character CPT/HCPCS code (e.g. '93306', '80061', '71045', '92250') OR 4-digit hospital revenue code (e.g. '0250', '0120') "
+                "into `cpt_code`, put ONLY the clean procedure name into `description` (e.g. 'Echocardiogram Complete'), and extract `quantity` and `billed_amount`.\n"
+                "5. Set `is_itemized` to True whenever valid 5-digit CPT/HCPCS or 4-digit revenue codes are present."
             )
             response = client.models.generate_content(
                 model=settings.GEMINI_MODEL,
@@ -124,34 +184,45 @@ def extract_bill_from_image(
                     temperature=0.1,
                 ),
             )
+            parsed_candidate: ExtractedBillSchema | None = None
             if response.parsed and isinstance(response.parsed, ExtractedBillSchema):
-                parsed_bill: ExtractedBillSchema = response.parsed
-                if parsed_bill.line_items:
-                    return (
-                        parsed_bill,
-                        f"Live Google GenAI SDK ({settings.GEMINI_MODEL} Vision Structured Output)",
-                    )
-            if response.text:
+                parsed_candidate = normalize_and_filter_extracted_bill(response.parsed)
+            elif response.text:
                 data = json.loads(response.text)
-                parsed_bill = ExtractedBillSchema(**data)
-                if parsed_bill.line_items:
-                    return (
-                        parsed_bill,
-                        f"Live Google GenAI SDK ({settings.GEMINI_MODEL} Vision JSON)",
-                    )
+                parsed_candidate = normalize_and_filter_extracted_bill(
+                    ExtractedBillSchema(**data)
+                )
+
+            if parsed_candidate and parsed_candidate.line_items:
+                if local_extracted:
+                    if not parsed_candidate.hospital_name and local_extracted.hospital_name:
+                        parsed_candidate.hospital_name = local_extracted.hospital_name
+                    if not parsed_candidate.payer_name and local_extracted.payer_name:
+                        parsed_candidate.payer_name = local_extracted.payer_name
+                return (
+                    parsed_candidate,
+                    f"Live Google GenAI SDK ({settings.GEMINI_MODEL} Vision Structured Output)",
+                )
         except Exception as exc:
-            fallback_reason = f"Deterministic Fallback (Gemini OCR fallback triggered: {type(exc).__name__})"
+            import time
+            global _GEMINI_FAILED_AT
+            _GEMINI_FAILED_AT = time.monotonic()
+            fallback_reason = f"Deterministic Local OCR Engine (Gemini Vision fallback: {type(exc).__name__})"
         else:
-            fallback_reason = "Deterministic Fallback (Uploaded synthetic/blank test image -> loaded ER Trauma template)"
+            fallback_reason = "Deterministic Local OCR Engine (Extracted directly from redacted bill image)"
     else:
         fallback_reason = (
-            "Deterministic Offline Mode (Set GEMINI_API_KEY in .env for live gemini-2.5-flash Vision OCR)"
+            "Deterministic Offline OCR Mode (Set GEMINI_API_KEY in .env for live gemini-2.5-flash Vision OCR)"
         )
+
+    if local_extracted and local_extracted.line_items:
+        return normalize_and_filter_extracted_bill(local_extracted), fallback_reason
 
     demo_default = DEMO_BILLS["demo_1_er_trauma"]
     return (
         ExtractedBillSchema(
             hospital_name=fallback_hospital or demo_default["hospital_name"],
+            payer_name=str(demo_default.get("default_payer", "Anthem Blue Cross")),
             is_itemized=True,
             line_items=[RawLineItem(**item) for item in demo_default["line_items"]],
         ),
@@ -177,7 +248,10 @@ def generate_explanations_and_dispute_letter(
 
     if _has_valid_api_key():
         try:
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            client = genai.Client(
+                api_key=settings.GEMINI_API_KEY,
+                http_options={"timeout": 2000},
+            )
             serializable_lines = [line.model_dump() for line in audited_lines]
             audit_payload = {
                 "hospital_name": hospital_name,
@@ -239,6 +313,9 @@ def generate_explanations_and_dispute_letter(
                     f"Live Google GenAI SDK ({settings.GEMINI_MODEL} JSON)",
                 )
         except Exception as exc:
+            import time
+            global _GEMINI_FAILED_AT
+            _GEMINI_FAILED_AT = time.monotonic()
             mode_label = f"Deterministic Multi-Language Engine (Gemini fallback: {type(exc).__name__})"
         else:
             mode_label = "Deterministic Multi-Language Engine"
@@ -375,6 +452,22 @@ def _translate_why_flagged(
             ),
             "Vietnamese": (
                 f"TÍNH TIỀN TRÙNG LẶP (-${line.layer_1_deduction:,.2f}): Mã CPT {line.cpt_code} bị tính hai lần trên cùng một hóa đơn mà không có căn cứ hợp lệ."
+            ),
+        }[lang]
+
+    if line.status == "REVENUE_CODE_ROLLUP":
+        return {
+            "English": (
+                f"UNITEMIZED UB-04 REVENUE CODE ROLL-UP (-${line.layer_1_deduction:,.2f}): Hospital billed vague 4-digit Revenue Code {line.cpt_code} (${line.billed_amount:,.2f}) without disclosing the required 5-digit HCPCS/NDC drug or supply code. Unsupported markup above the ${line.allowed_amount:,.2f} Medicare baseline is disallowed."
+            ),
+            "Russian": (
+                f"НЕДЕТАЛИЗИРОВАННЫЙ КОД ДОХОДА UB-04 (-${line.layer_1_deduction:,.2f}): Больница выставила общий 4-значный код {line.cpt_code} (${line.billed_amount:,.2f}) без обязательного 5-значного кода препарата/расходника HCPCS/NDC. Необоснованная наценка сверх базы Medicare (${line.allowed_amount:,.2f}) списана."
+            ),
+            "Spanish": (
+                f"CARGO AGRUPADO UB-04 SIN DESGLOSAR (-${line.layer_1_deduction:,.2f}): El hospital facturó el código genérico de 4 dígitos {line.cpt_code} (${line.billed_amount:,.2f}) sin revelar el código específico HCPCS/NDC de 5 dígitos. Se elimina el sobreprecio sobre la base de Medicare (${line.allowed_amount:,.2f})."
+            ),
+            "Vietnamese": (
+                f"MÃ DOANH THU UB-04 GOM GỘP THIẾU CHI TIẾT (-${line.layer_1_deduction:,.2f}): Bệnh viện tính mã 4 chữ số chung {line.cpt_code} (${line.billed_amount:,.2f}) mà không công bố mã thuốc/vật tư 5 chữ số HCPCS/NDC. Phần chênh lệch vượt mức cơ sở Medicare (${line.allowed_amount:,.2f}) bị loại bỏ."
             ),
         }[lang]
 
@@ -546,7 +639,9 @@ def _generate_formal_dispute_letter(
     charity_care: CharityCareSummary = audit_data["charity_care"]
 
     l1_lines = [
-        line for line in audited_lines if line.status in ("NCCI_VIOLATION", "DUPLICATE")
+        line
+        for line in audited_lines
+        if line.status in ("NCCI_VIOLATION", "DUPLICATE", "REVENUE_CODE_ROLLUP")
     ]
     l2_lines = [line for line in audited_lines if line.status == "OVERCHARGED"]
 

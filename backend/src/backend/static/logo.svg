@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 130" role="img" aria-label="MedBill Shield logo">
+  <!-- Shield body -->
+  <path d="M44 12 L20 22 L20 62 C20 88 44 108 44 108 C44 108 68 88 68 62 L68 22 Z" fill="#1B3A6B"/>
+  <!-- Shield inner lighter outline -->
+  <path d="M44 18 L26 26 L26 62 C26 84 44 101 44 101 C44 101 62 84 62 62 L62 26 Z" fill="#FFFFFF"/>
+  <!-- Teal cross -->
+  <rect x="38" y="30" width="12" height="36" fill="#1A9BA1" rx="2"/>
+  <rect x="28" y="40" width="32" height="12" fill="#1A9BA1" rx="2"/>
+  <!-- Document lines (lower shield) -->
+  <rect x="32" y="72" width="24" height="3" fill="#1B3A6B"/>
+  <rect x="32" y="79" width="18" height="3" fill="#1B3A6B"/>
+  <!-- Green swoosh orbit -->
+  <ellipse cx="44" cy="62" rx="34" ry="16" fill="none" stroke="#5CB85C" stroke-width="4.5" stroke-dasharray="1000" stroke-dashoffset="0" transform="rotate(-30 44 62)" opacity="0.9"/>
+  <ellipse cx="44" cy="62" rx="34" ry="16" fill="none" stroke="#8BC34A" stroke-width="3" stroke-dasharray="60 1000" stroke-dashoffset="-20" transform="rotate(-30 44 62)" opacity="0.6"/>
+  <!-- MedBill text (navy bold) -->
+  <text x="90" y="77" font-family="'Inter','Segoe UI',Arial,sans-serif" font-weight="800" font-size="52" fill="#1B3A6B" letter-spacing="-1">MedBill</text>
+  <!-- Shield text (teal bold) -->
+  <text x="305" y="77" font-family="'Inter','Segoe UI',Arial,sans-serif" font-weight="800" font-size="52" fill="#1A9BA1" letter-spacing="-1"> Shield</text>
+</svg>
